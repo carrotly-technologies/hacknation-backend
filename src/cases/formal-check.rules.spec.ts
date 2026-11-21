@@ -35,6 +35,7 @@ describe('formalCheck: periodic', () => {
       ['ADDITIONAL_CRITERIA_CONSISTENT', true],
       ['JUSTIFICATION_IF_NEGATIVE', false],
       ['IPRZ_REQUIRED', false],
+      ['PROMOTION_REQUEST', false],
     ]);
     expect(item(seed('c-001'), 'ALL_CRITERIA_DECIDED')?.message).toContain(
       '„Myślenie analityczne”',
@@ -81,7 +82,12 @@ describe('formalCheck: periodic', () => {
   });
 
   it('all green for a complete positive assessment', () => {
-    const r = { ...decided([5, 7, 5, 7, 5, 7]), iprz: 'Plan.' };
+    const base = decided([5, 7, 5, 7, 5, 7]);
+    const r = {
+      ...base,
+      iprz: 'Plan.',
+      promotionRequest: { ...base.promotionRequest, attached: 'NO' as const },
+    };
     expect(formalCheck(r, TODAY).every((i) => i.ok)).toBe(true);
   });
 });

@@ -1,11 +1,14 @@
 import type {
   CaseRecord,
+  CycleStart,
   Observation,
   PartI,
+  PreviousAssessment,
   RatingPoints,
 } from '../case.types.js';
 import { findCompetency } from '../case.rules.js';
 import { addDays, addMonths, isNonWorkingDay } from '../dates.js';
+import { emptyPromotionRequest } from '../promotion.rules.js';
 
 /** Dates relative to the demo "today". */
 export function relative(today: string) {
@@ -51,6 +54,8 @@ export function caseRecord(base: Required_ & Partial<CaseRecord>): CaseRecord {
     deviationNotes: {},
     justification: '',
     iprz: '',
+    previousAssessment: null,
+    promotionRequest: emptyPromotionRequest(base.person.employment),
     firstConditions: null,
     signedByEvaluatorOn: null,
     sentForAckOn: null,
@@ -87,4 +92,22 @@ export function observations(
   return list
     .map((o, i) => ({ id: `${caseId}-obs-${i + 1}`, ...o }))
     .sort((a, b) => a.date.localeCompare(b.date));
+}
+
+/**
+ * Part II item 10 for an urzędnik whose cycle started with a previous
+ * assessment: result and date from `cycleStart`, the level as on the sheet.
+ */
+export function previousAssessment(
+  cycleStart: CycleStart,
+  level: string,
+): PreviousAssessment {
+  if (cycleStart.kind === 'HIRED') {
+    throw new Error('No previous assessment for a cycle that starts on hiring');
+  }
+  return {
+    result: cycleStart.kind === 'PREVIOUS_POSITIVE' ? 'POSITIVE' : 'NEGATIVE',
+    level,
+    date: cycleStart.assessedOn,
+  };
 }

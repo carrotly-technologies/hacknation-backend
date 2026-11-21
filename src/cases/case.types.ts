@@ -145,6 +145,33 @@ export interface FirstConditions {
   reportDue: string | null;
 }
 
+/**
+ * "Dane dotyczące poprzedniej oceny okresowej urzędnika służby cywilnej"
+ * (part II of sheets A, B, C). `level` is the overall level as written on the
+ * sheet, e.g. "na poziomie oczekiwań" (footnote 14/15 of the template).
+ */
+export interface PreviousAssessment {
+  result: 'POSITIVE' | 'NEGATIVE' | null;
+  level: string | null;
+  date: string | null;
+}
+
+/** Answer to "Czy do oceny okresowej dołączono wniosek o przyznanie kolejnego stopnia służbowego?". */
+export type PromotionAttached = 'YES' | 'NO' | 'NOT_APPLICABLE';
+
+/**
+ * The answer above and part III of the sheet (the request of art. 89 ust. 1
+ * ustawy). Part III fields are kept only while `attached` is YES.
+ */
+export interface PromotionRequest {
+  attached: PromotionAttached | null;
+  appointedYear: number | null;
+  currentGrade: string | null;
+  gradeGrantedOn: string | null;
+  requestedGrade: string | null;
+  motivation: string;
+}
+
 export interface FormalCheckItem {
   id: string;
   ok: boolean;
@@ -169,6 +196,8 @@ export interface CaseDetail extends CaseSummary {
   deviationNotes: Record<string, string>;
   justification: string;
   iprz: string;
+  previousAssessment: PreviousAssessment | null;
+  promotionRequest: PromotionRequest;
   firstConditions: FirstConditions | null;
   evaluation: EvaluateResult | null;
   formalCheck: FormalCheckItem[];
@@ -216,6 +245,8 @@ export interface CaseRecord {
   deviationNotes: Record<string, string>;
   justification: string;
   iprz: string;
+  previousAssessment: PreviousAssessment | null;
+  promotionRequest: PromotionRequest;
   firstConditions: FirstConditions | null;
   signedByEvaluatorOn: string | null;
   sentForAckOn: string | null;

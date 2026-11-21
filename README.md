@@ -99,6 +99,7 @@ Contract: `notatki/api-kontrakt-v1.md`. Static data and pure functions.
 | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `GET /api/competency-model`           | 14 competencies, 49 indicators with level descriptions, scale 1/3/5/7/9, instructions (Polish)     |
 | `GET /api/sheets`                     | Sheets `A`, `B`, `C` (periodic, rozp. 2016) and `FIRST` (first assessment, rozp. 2015)             |
+| `GET /api/civil-service-grades`       | `{ grades, legalBasis }`: the nine civil-service grades `I`…`IX` (art. 86 ust. 1 ustawy), lowest first |
 | `POST /api/assessments/suggest-level` | Suggested criterion score from indicator ratings (`null` = no basis to rate). Only a suggestion    |
 | `POST /api/assessments/evaluate`      | Average, level and POSITIVE/NEGATIVE result with Polish reasons citing the regulation              |
 
@@ -107,6 +108,9 @@ Contract: `notatki/api-kontrakt-v1.md`. Static data and pure functions.
 - Periodic: POSITIVE iff average > 4 and no score equals 1 (§11 rozp. 2016). FIRST: POSITIVE iff exam `YES` or
   `NOT_APPLICABLE`, report on time, at most one 3 and average ≥ 5 (§10 rozp. 2015). Thresholds use the exact average.
 - Validation errors answer 400 with `message` as an array of Polish strings.
+- Each periodic sheet has `template`: the fixed texts of its official template (annex, title, „Potwierdzamy” of part I,
+  the assessed person's statement, „Pouczenie” of art. 83 ust. 1, the part III note, footnote and request sentence),
+  so the UI never retypes them. `FIRST` has `template: null`.
 
 ```bash
 curl -X POST localhost:3000/api/assessments/evaluate -H 'content-type: application/json' \
@@ -137,6 +141,17 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
   (`formal-check.rules.ts`). The OSP proposal (sheet + additional criteria) is `src/osp/osp-analysis.rules.ts`.
 - `evaluation` in `CaseDetail` is computed with the v1 `evaluate` rules once every criterion is decided.
 - PATCH merges one level deep (ratings per indicator); `null` in `decisions` / `deviationNotes` removes a key.
+- Part II items 10–11 and part III of sheets A/B/C (`src/cases/promotion.rules.ts`), editable on the same stages as
+  `justification` / `iprz` (until the evaluator signs):
+  - `previousAssessment: { result: POSITIVE|NEGATIVE|null, level, date } | null`; `level` is a scale label as the
+    sheet writes it (`na poziomie oczekiwań`); seeded (system data) only for urzędnicy past `OPENING_TALK` whose cycle
+    started with a previous assessment. Every case up to `OPENING_TALK` starts with these fields empty.
+  - `promotionRequest: { attached: YES|NO|NOT_APPLICABLE|null, appointedYear, currentGrade, gradeGrantedOn,
+    requestedGrade, motivation }`. A pracownik służby cywilnej is always `NOT_APPLICABLE` (YES/NO → 400); an urzędnik
+    answers YES or NO; YES is refused for a negative result (§11 ust. 5 rozp. 2016). Part III fields are accepted and
+    kept only with YES (NO clears them), grades come from `GET /api/civil-service-grades`, `requestedGrade` must be
+    the next grade after `currentGrade` (art. 89 ust. 1), `motivation` ≤ 4000 characters.
+  - The formal check item `PROMOTION_REQUEST` requires an answer and, with YES, a complete part III.
 - 409 body: `{ statusCode, error, message }` (+ `formalCheck` with the failing items for `SIGN_ASSESSMENT`).
 - `CaseDetail` also carries `availableActions` (actions legal right now), an addition to the contract.
 - Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` („Wstępny formularz”: the evaluator reviews the proposed sheet and

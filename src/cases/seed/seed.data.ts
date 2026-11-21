@@ -1,10 +1,12 @@
 import type { CaseRecord, Evaluator } from '../case.types.js';
 import { defaultAssessmentDue, defaultReportDue } from '../deadlines.rules.js';
 import { addDays, formatDatePl } from '../dates.js';
+import { emptyPromotionRequest } from '../promotion.rules.js';
 import {
   caseRecord,
   emptyPartI,
   observations,
+  previousAssessment,
   ratingsFor,
   relative,
 } from './seed-helpers.js';
@@ -82,6 +84,10 @@ function mainCase(r: Rel): CaseRecord {
     sheetId: 'C',
     ospId: 'osp-dsi-wwi-5',
     cycleStart: { kind: 'PREVIOUS_POSITIVE', assessedOn: previous },
+    previousAssessment: previousAssessment(
+      { kind: 'PREVIOUS_POSITIVE', assessedOn: previous },
+      'powyżej oczekiwań',
+    ),
     stage: 'ASSESSMENT',
     completedOn: {
       OSP_ANALYSIS: r.workday(confirmed.replace(/-\d\d$/, '-02')),
@@ -283,6 +289,10 @@ function sheetBCase(r: Rel): CaseRecord {
     sheetId: 'B',
     ospId: 'osp-dwm-wkam-1',
     cycleStart: { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-15, 10) },
+    previousAssessment: previousAssessment(
+      { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-15, 10) },
+      'na poziomie oczekiwań',
+    ),
     stage: 'OBSERVATION',
     completedOn: { OSP_ANALYSIS: r.months(-14, -3), OPENING_TALK: confirmed },
     partI: {
@@ -510,6 +520,11 @@ function objectionPeriodCase(r: Rel): CaseRecord {
     sheetId: 'C',
     ospId: 'osp-dsi-wwi-5',
     cycleStart: { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-25, 20) },
+    previousAssessment: previousAssessment(
+      { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-25, 20) },
+      'na poziomie oczekiwań',
+    ),
+    promotionRequest: { ...emptyPromotionRequest('URZEDNIK'), attached: 'NO' },
     stage: 'DOCUMENT',
     completedOn: {
       OSP_ANALYSIS: r.months(-24, 2),
@@ -691,6 +706,10 @@ function otherUnitCases(r: Rel): CaseRecord[] {
       path: 'PERIODIC',
       sheetId: 'C',
       cycleStart: { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-25, -10) },
+      previousAssessment: previousAssessment(
+        { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-25, -10) },
+        'na poziomie oczekiwań',
+      ),
       stage: 'OBSERVATION',
       completedOn: {
         OSP_ANALYSIS: overdueConfirmed,

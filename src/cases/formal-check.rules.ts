@@ -13,6 +13,7 @@ import {
 import type { CaseRecord, FormalCheckItem } from './case.types.js';
 import { formatDatePl } from './dates.js';
 import { firstAssessmentWindow, USC } from './deadlines.rules.js';
+import { promotionRequestCheck } from './promotion.rules.js';
 
 const quoted = (ids: readonly string[]) =>
   ids.map((id) => `„${criterionName(id)}”`).join(', ');
@@ -196,6 +197,7 @@ export function formalCheck(
         : 'Wpisz wnioski do IPRZ: są wymagane niezależnie od wyniku oceny.',
       legalBasis: `§11 ust. 1 pkt 5 ${RO_2016}; art. 108 ${USC}`,
     });
+    items.push(promotionRequestCheck(record, evaluation));
   }
 
   return items;

@@ -10,6 +10,7 @@ import type {
   Evaluator,
 } from './case.types.js';
 import { formalCheck } from './formal-check.rules.js';
+import { promotionRequestOf } from './promotion.rules.js';
 import {
   buildStages,
   caseStatus,
@@ -53,6 +54,8 @@ export function toDetail(
     deviationNotes: record.deviationNotes,
     justification: record.justification,
     iprz: record.iprz,
+    previousAssessment: record.previousAssessment,
+    promotionRequest: promotionRequestOf(record),
     firstConditions: record.firstConditions,
     evaluation: computeEvaluation(record, today),
     formalCheck: formalCheck(record, today),

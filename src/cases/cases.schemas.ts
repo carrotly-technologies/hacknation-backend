@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { GRADE_IDS } from '../civil-service-grades/data/grades.data.js';
 import { SHEET_IDS } from '../sheets/sheet.types.js';
 import { CASE_ACTIONS } from './case.types.js';
 import { isIsoDate } from './dates.js';
@@ -19,6 +20,17 @@ const ratingPoints = z
     },
   )
   .nullable();
+
+const grade = (what: string) =>
+  z
+    .enum(GRADE_IDS, {
+      error: `${what} musi być jednym ze stopni służbowych: ${GRADE_IDS.join(', ')} (GET /api/civil-service-grades).`,
+    })
+    .nullable()
+    .optional();
+
+/** Longest motivation of the request in part III. */
+const MOTIVATION_MAX = 4000;
 
 /**
  * PATCH /cases/:id. Objects are merged one level deep (keys given replace
@@ -54,6 +66,45 @@ export const patchCaseSchema = z.object({
   deviationNotes: z.record(z.string(), z.string().nullable()).optional(),
   justification: z.string().optional(),
   iprz: z.string().optional(),
+  /** Part II item 10 of the sheet; null clears it. */
+  previousAssessment: z
+    .object({
+      result: z
+        .enum(['POSITIVE', 'NEGATIVE'], {
+          error:
+            'Wynik poprzedniej oceny musi mieć wartość POSITIVE, NEGATIVE albo null.',
+        })
+        .nullable(),
+      level: z.string().max(100).nullable(),
+      date: isoDate.nullable(),
+    })
+    .partial()
+    .nullable()
+    .optional(),
+  /** Part II item 11 and part III of the sheet. */
+  promotionRequest: z
+    .object({
+      attached: z
+        .enum(['YES', 'NO', 'NOT_APPLICABLE'], {
+          error:
+            'attached musi mieć jedną z wartości: YES, NO, NOT_APPLICABLE albo null.',
+        })
+        .nullable(),
+      appointedYear: z
+        .number({ error: 'Rok mianowania musi być liczbą (rrrr).' })
+        .int({ error: 'Rok mianowania musi być liczbą całkowitą (rrrr).' })
+        .min(1000, { error: 'Rok mianowania musi mieć 4 cyfry (rrrr).' })
+        .max(9999, { error: 'Rok mianowania musi mieć 4 cyfry (rrrr).' })
+        .nullable(),
+      currentGrade: grade('Posiadany stopień służbowy'),
+      gradeGrantedOn: isoDate.nullable(),
+      requestedGrade: grade('Wnioskowany stopień służbowy'),
+      motivation: z.string().max(MOTIVATION_MAX, {
+        error: `Umotywowanie wniosku może mieć najwyżej ${MOTIVATION_MAX} znaków.`,
+      }),
+    })
+    .partial()
+    .optional(),
   firstConditions: z
     .object({
       examPassed: z

@@ -60,13 +60,40 @@ describe('Competency model, sheets and assessments (e2e)', () => {
         kind: 'PERIODIC',
         scale: [1, 3, 5, 7, 9],
         maxAdditionalCriteria: 3,
+        template: {
+          annex: 'Załącznik nr 3',
+          objectionNotice: expect.stringContaining(
+            'art. 83 ust. 1 ustawy z dnia 21 listopada 2008 r. o służbie cywilnej',
+          ),
+          partIIIApplicability: expect.stringContaining('art. 89 ust. 1'),
+        },
       });
+      expect(res.body[2].template.annex).toBe('Załącznik nr 4');
       expect(res.body[3]).toMatchObject({
         name: 'Arkusz pierwszej oceny',
         kind: 'FIRST',
         scale: [3, 5, 7],
         maxAdditionalCriteria: 0,
+        template: null,
       });
+    });
+  });
+
+  describe('GET /api/civil-service-grades', () => {
+    it('returns the nine grades of art. 86 ust. 1', async () => {
+      const res = await http().get('/api/civil-service-grades').expect(200);
+      expect(res.body.grades.map((g: { id: string }) => g.id)).toEqual([
+        'I',
+        'II',
+        'III',
+        'IV',
+        'V',
+        'VI',
+        'VII',
+        'VIII',
+        'IX',
+      ]);
+      expect(res.body.legalBasis).toContain('art. 86 ust. 1');
     });
   });
 

@@ -25,6 +25,16 @@ describe('demo seed', () => {
       });
       expect(c.partI.expectations).toEqual({});
       expect(c.partI.assessmentDue).toBeNull();
+      // Part II and III fields start empty too (attached: NOT_APPLICABLE only for a pracownik).
+      expect(c.previousAssessment).toBeNull();
+      expect(c.promotionRequest).toEqual({
+        attached: c.person.employment === 'PRACOWNIK' ? 'NOT_APPLICABLE' : null,
+        appointedYear: null,
+        currentGrade: null,
+        gradeGrantedOn: null,
+        requestedGrade: null,
+        motivation: '',
+      });
     }
   });
 

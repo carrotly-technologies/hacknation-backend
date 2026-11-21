@@ -91,7 +91,15 @@ describe('periodic state machine', () => {
 
   it('a negative assessment starts a 7-day opening talk and a 6-month re-assessment', () => {
     let r = decideAll(seed('c-001'), 3);
-    r = applyPatch(r, { iprz: 'Plan.', justification: 'Uzasadnienie.' }, TODAY);
+    r = applyPatch(
+      r,
+      {
+        iprz: 'Plan.',
+        justification: 'Uzasadnienie.',
+        promotionRequest: { attached: 'NO' },
+      },
+      TODAY,
+    );
     r = run(r, 'SIGN_ASSESSMENT', 'SEND_FOR_ACK', 'EMPLOYEE_ACK_ASSESSMENT');
     const text = r.history.at(-1)!.text;
     expect(text).toContain('§7 pkt 2');
@@ -155,6 +163,7 @@ describe('illegal transitions', () => {
       'ALL_CRITERIA_DECIDED',
       'JUSTIFICATION_IF_NEGATIVE',
       'IPRZ_REQUIRED',
+      'PROMOTION_REQUEST',
     ]);
   });
 });

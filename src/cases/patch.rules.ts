@@ -2,6 +2,7 @@ import { listPoints, RO_2016 } from '../assessments/assessment.format.js';
 import {
   allDecided,
   caseCriteria,
+  computeEvaluation,
   criterionName,
   effectiveStage,
   findCompetency,
@@ -17,6 +18,10 @@ import type {
 } from './case.types.js';
 import type { ObservationInput, PatchCase } from './cases.schemas.js';
 import { formatDatePl } from './dates.js';
+import {
+  mergePreviousAssessment,
+  mergePromotionRequest,
+} from './promotion.rules.js';
 
 const PART_II: readonly StageId[] = [
   'ASSESSMENT',
@@ -198,6 +203,37 @@ export function applyPatch(
   if (patch.iprz !== undefined) {
     partIIGuard(record, 'iprz');
     next.iprz = patch.iprz;
+  }
+
+  if (
+    patch.previousAssessment !== undefined ||
+    patch.promotionRequest !== undefined
+  ) {
+    if (record.path !== 'PERIODIC') {
+      throw new CaseRuleError(
+        'Poprzednia ocena okresowa i wniosek o kolejny stopień służbowy są częścią arkusza oceny okresowej, nie pierwszej oceny.',
+      );
+    }
+  }
+  if (patch.previousAssessment !== undefined) {
+    partIIGuard(record, 'Dane dotyczące poprzedniej oceny okresowej');
+    next.previousAssessment = mergePreviousAssessment(
+      record.previousAssessment,
+      patch.previousAssessment,
+      today,
+      errors,
+    );
+  }
+  if (patch.promotionRequest !== undefined) {
+    partIIGuard(record, 'Wniosek o przyznanie kolejnego stopnia służbowego');
+    // Decisions of the same patch count: the request needs a positive result.
+    next.promotionRequest = mergePromotionRequest(
+      record,
+      patch.promotionRequest,
+      computeEvaluation(next, today),
+      today,
+      errors,
+    );
   }
 
   if (patch.firstConditions) {

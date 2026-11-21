@@ -151,7 +151,10 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
 
     await http()
       .patch('/api/cases/c-001')
-      .send({ iprz: 'Szkolenie z prostego języka w pismach urzędowych.' })
+      .send({
+        iprz: 'Szkolenie z prostego języka w pismach urzędowych.',
+        promotionRequest: { attached: 'NO' },
+      })
       .expect(200);
     res = await act('c-001', 'SIGN_ASSESSMENT').expect(200);
     expect(res.body).toMatchObject({
@@ -194,6 +197,121 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       .send({ partI: { additionalCriteria: ['komunikacja'] } })
       .expect(400);
     expect(res.body.message[0]).toContain('obowiązkowe w arkuszu C');
+  });
+
+  describe('previous assessment and the request for the next grade', () => {
+    const decisions = {
+      wykorzystywanie_wiedzy: 7,
+      rzetelnosc: 7,
+      organizacja_pracy: 7,
+      wspolpraca: 7,
+      komunikacja: 5,
+      myslenie_analityczne: 7,
+    };
+    const partIII = {
+      appointedYear: 2018,
+      currentGrade: 'III',
+      gradeGrantedOn: '2018-03-01',
+      requestedGrade: 'IV',
+      motivation:
+        'Dwie kolejne oceny powyżej oczekiwań; samodzielnie prowadzi opinie w sprawach systemów wysokiego ryzyka.',
+    };
+
+    it('seeds the previous assessment of an urzędnik and an empty request', async () => {
+      const res = await http().get('/api/cases/c-001').expect(200);
+      expect(res.body.previousAssessment).toMatchObject({
+        result: 'POSITIVE',
+        level: 'powyżej oczekiwań',
+        date: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
+      });
+      expect(res.body.promotionRequest).toEqual({
+        attached: null,
+        appointedYear: null,
+        currentGrade: null,
+        gradeGrantedOn: null,
+        requestedGrade: null,
+        motivation: '',
+      });
+      expect(
+        res.body.formalCheck.find(
+          (f: { id: string }) => f.id === 'PROMOTION_REQUEST',
+        ),
+      ).toMatchObject({ ok: false, message: expect.stringContaining('TAK') });
+    });
+
+    it('saves and reads back the new fields, locked after signing', async () => {
+      await http()
+        .patch('/api/cases/c-001')
+        .send({
+          decisions,
+          iprz: 'Szkolenie z prostego języka.',
+          previousAssessment: { level: 'na poziomie oczekiwań' },
+          promotionRequest: { attached: 'YES', ...partIII },
+        })
+        .expect(200);
+      let res = await http().get('/api/cases/c-001').expect(200);
+      expect(res.body.previousAssessment.level).toBe('na poziomie oczekiwań');
+      expect(res.body.promotionRequest).toEqual({
+        attached: 'YES',
+        ...partIII,
+      });
+
+      res = await http()
+        .patch('/api/cases/c-001')
+        .send({ promotionRequest: { requestedGrade: 'VI' } })
+        .expect(400);
+      expect(res.body.message[0]).toContain('po stopniu III jest stopień IV');
+      res = await http()
+        .patch('/api/cases/c-001')
+        .send({ promotionRequest: { appointedYear: 99 } })
+        .expect(400);
+      expect(JSON.stringify(res.body.message)).toContain('4 cyfry');
+      res = await http()
+        .patch('/api/cases/c-001')
+        .send({ promotionRequest: { motivation: 'x'.repeat(4001) } })
+        .expect(400);
+      expect(JSON.stringify(res.body.message)).toContain('4000');
+
+      await act('c-001', 'SIGN_ASSESSMENT').expect(200);
+      res = await http()
+        .patch('/api/cases/c-001')
+        .send({ promotionRequest: { motivation: 'Zmiana po podpisie.' } })
+        .expect(409);
+      expect(res.body.message).toContain('zablokowane');
+      res = await http()
+        .patch('/api/cases/c-001')
+        .send({ previousAssessment: null })
+        .expect(409);
+      expect(res.body.message).toContain('zablokowane');
+      res = await http().get('/api/cases/c-001').expect(200);
+      expect(res.body.promotionRequest.requestedGrade).toBe('IV');
+    });
+
+    it('forces NOT_APPLICABLE for a pracownik służby cywilnej', async () => {
+      let res = await http().get('/api/cases/c-002').expect(200);
+      expect(res.body.person.employment).toBe('PRACOWNIK');
+      expect(res.body.promotionRequest.attached).toBe('NOT_APPLICABLE');
+      expect(res.body.previousAssessment).toBeNull();
+
+      // c-101 belongs to another supervisor; use the team's own pracownik in part II.
+      await act('c-002', 'ACCEPT_OSP_ANALYSIS').expect(200);
+      await act('c-002', 'ACCEPT_SHEET').expect(200);
+      await act('c-002', 'CONFIRM_PART_I').expect(200);
+      await act('c-002', 'EMPLOYEE_ACK_PART_I').expect(200);
+      await act('c-002', 'START_ASSESSMENT').expect(200);
+      res = await http()
+        .patch('/api/cases/c-002')
+        .send({ promotionRequest: { attached: 'YES' } })
+        .expect(400);
+      expect(res.body.message[0]).toContain('pracownikiem służby cywilnej');
+      res = await http().get('/api/cases/c-002').expect(200);
+      expect(res.body.promotionRequest.attached).toBe('NOT_APPLICABLE');
+      expect(
+        res.body.formalCheck.find(
+          (f: { id: string }) => f.id === 'PROMOTION_REQUEST',
+        ).ok,
+      ).toBe(true);
+    });
   });
 
   it('illegal action -> 409 with a Polish explanation; unknown action -> 400', async () => {

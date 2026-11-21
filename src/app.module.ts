@@ -8,6 +8,7 @@ import { AssistantModule } from './assistant/assistant.module.js';
 import { AssessmentsModule } from './assessments/assessments.module.js';
 import { CompetencyModelModule } from './competency-model/competency-model.module.js';
 import { CasesModule } from './cases/cases.module.js';
+import { CivilServiceGradesModule } from './civil-service-grades/civil-service-grades.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DocsModule } from './docs/docs.module.js';
 import { HealthModule } from './health/health.module.js';
@@ -28,6 +29,7 @@ import { SheetsModule } from './sheets/sheets.module.js';
     AppConfigModule,
     CompetencyModelModule,
     SheetsModule,
+    CivilServiceGradesModule,
     AssessmentsModule,
     OspModule,
     CasesModule,
