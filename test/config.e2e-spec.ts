@@ -6,66 +6,39 @@ import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
 import { loginAs, withToken } from './auth.helpers.js';
 
-async function createApp(): Promise<INestApplication<App>> {
-  const moduleFixture: TestingModule = await Test.createTestingModule({
-    imports: [AppModule],
-  }).compile();
-  const app = moduleFixture.createNestApplication<INestApplication<App>>();
-  configureApp(app);
-  await app.init();
-  return app;
-}
+describe('Config: the assistant is always on (e2e)', () => {
+  let app: INestApplication<App>;
 
-describe('Config and FEATURE_ASSISTANT (e2e)', () => {
-  const original = process.env.FEATURE_ASSISTANT;
-  let app: INestApplication<App> | undefined;
-
-  beforeAll(() => {
+  beforeAll(async () => {
     delete process.env.LLM_BASE_URL;
     delete process.env.LLM_MODEL;
+    const moduleFixture: TestingModule = await Test.createTestingModule({
+      imports: [AppModule],
+    }).compile();
+    app = moduleFixture.createNestApplication<INestApplication<App>>();
+    configureApp(app);
+    await app.init();
   });
 
-  afterEach(async () => {
-    await app?.close();
-    app = undefined;
-    if (original === undefined) delete process.env.FEATURE_ASSISTANT;
-    else process.env.FEATURE_ASSISTANT = original;
+  afterAll(async () => {
+    await app.close();
   });
 
-  it('enables the assistant when the flag is not set', async () => {
-    delete process.env.FEATURE_ASSISTANT;
-    app = await createApp();
-    const token = await loginAs(app, 'j.kaminska');
-    const http = () => withToken(app!, token);
+  it('GET /api/config always reports the assistant as on', async () => {
     await request(app.getHttpServer())
       .get('/api/config')
       .expect(200)
       .expect({ features: { assistant: true } });
-    await http()
-      .post('/api/assistant/ask')
-      .send({ question: 'Jak liczyć terminy?', assistant: 'FORMAL' })
-      .expect(200);
   });
 
-  it('hides the assistant with FEATURE_ASSISTANT=false', async () => {
-    process.env.FEATURE_ASSISTANT = 'false';
-    app = await createApp();
+  it('serves every /api/assistant/* route', async () => {
     const token = await loginAs(app, 'j.kaminska');
-    const http = () => withToken(app!, token);
-    await request(app.getHttpServer())
-      .get('/api/config')
-      .expect(200)
-      .expect({ features: { assistant: false } });
+    const http = () => withToken(app, token);
     await http()
       .post('/api/assistant/ask')
       .send({ question: 'Jak liczyć terminy?', assistant: 'FORMAL' })
-      .expect(404);
-    await http().get('/api/assistant/suggestions').expect(404);
-    await http().get('/api/assistant/documents').expect(404);
-    const docs = await http().get('/api/docs').expect(200);
-    expect((docs.body as unknown[]).length).toBeGreaterThan(0);
-    await request(app.getHttpServer())
-      .get('/api/docs/ocena-okresowa/rozporzadzenie-oceny-okresowe-2016.pdf')
       .expect(200);
+    await http().get('/api/assistant/suggestions').expect(200);
+    await http().get('/api/assistant/documents').expect(200);
   });
 });

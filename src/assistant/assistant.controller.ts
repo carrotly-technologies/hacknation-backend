@@ -1,27 +1,17 @@
 import { Can } from '@nestjs/authorization';
-import {
-  Body,
-  Controller,
-  Get,
-  HttpCode,
-  Post,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Query } from '@nestjs/common';
 import type { StageId } from '../cases/case.types.js';
 import {
   type AskInput,
   askSchema,
   suggestionsQuerySchema,
 } from './assistant.schemas.js';
-import { AssistantEnabledGuard } from './assistant-enabled.guard.js';
 import { AssistantService } from './assistant.service.js';
 import type { AskResponse } from './assistant.types.js';
 import { type DocumentListItem, listDocuments } from './documents.js';
 
 @Can.Anyone()
 @Controller('assistant')
-@UseGuards(AssistantEnabledGuard)
 export class AssistantController {
   constructor(private readonly assistant: AssistantService) {}
 

@@ -17,9 +17,9 @@ import { contentType, resolveDocFile } from './docs-files.js';
 
 /**
  * GET /api/docs: the list of source documents; GET /api/docs/<path>: the
- * originals from docs/. Always on, also with FEATURE_ASSISTANT=false. The
- * list needs sign-in; the files are public legal documents linked from
- * answers and opened in a new tab, where no Bearer token can be sent.
+ * originals from docs/. The list needs sign-in; the files are public legal
+ * documents linked from answers and opened in a new tab, where no Bearer
+ * token can be sent.
  */
 @Can.Anyone()
 @Controller('docs')
