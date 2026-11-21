@@ -1,0 +1,51 @@
+{
+  "type": "diff",
+  "version": "10",
+  "dialect": "postgres",
+  "id": "3314aa65-e659-4b21-8581-69c34a22aa03",
+  "prevIds": [
+    "b40136ef-6e98-4572-9e89-f88900362e12"
+  ],
+  "footprints": [
+    {
+      "statementType": "drop_table",
+      "statementTarget": [
+        "table",
+        "public",
+        "app_settings"
+      ],
+      "writes": [
+        "s|tbl|public.app_settings",
+        "n|tbl|public.app_settings",
+        "e|tbl|public.app_settings",
+        "n|rel|public.app_settings",
+        "n|type|public.app_settings"
+      ],
+      "reads": [
+        "n|sch|public"
+      ]
+    }
+  ],
+  "deltas": [
+    {
+      "op": "drop",
+      "key": "tables\u0000[\"public\",\"app_settings\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"app_settings\",\"key\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"app_settings\",\"value\"]"
+    },
+    {
+      "op": "drop",
+      "key": "columns\u0000[\"public\",\"app_settings\",\"updated_at\"]"
+    },
+    {
+      "op": "drop",
+      "key": "pks\u0000[\"public\",\"app_settings\",\"app_settings_pkey\"]"
+    }
+  ]
+}
