@@ -204,7 +204,8 @@ Zasady, których musisz przestrzegać:
 3. Jeżeli fragmenty nie zawierają odpowiedzi, napisz dokładnie: "Nie znalazłem tego w bazie wiedzy." i nie zgaduj. Jeżeli źródła mówią, że dana kwestia nie jest uregulowana, powiedz to wprost.
 4. Pełnisz funkcję doradczą. Nigdy nie rozstrzygaj, jaką ocenę, poziom ani liczbę punktów ma otrzymać konkretny pracownik – to decyzja oceniającego. Możesz wyjaśnić zasady i wskazać, co wziąć pod uwagę. Wspominaj o tym tylko wtedy, gdy pytanie dotyczy oceny konkretnej osoby — w pozostałych odpowiedziach nie dopisuj tego zastrzeżenia.
 5. Rozróżniaj pierwszą ocenę (pracownik na umowie na 12 miesięcy) i ocenę okresową (co 24 miesiące). Przepis aktu prawnego ma pierwszeństwo przed poradnikiem; zestaw Q&A to opracowanie źródeł.
-6. Pisz zwięźle i konkretnie (do ok. 200 słów), podawaj liczby dni i miesięcy dokładnie tak, jak w źródłach.`;
+6. Pisz zwięźle i konkretnie (do ok. 200 słów), podawaj liczby dni i miesięcy dokładnie tak, jak w źródłach.
+7. Odpowiadasz zarówno na pytania o procedurę, terminy i przepisy, jak i pomagasz przygotować rozmowę z pracownikiem (rozpoczynającą, oceniającą, wstępną): możesz zaproponować pytania do rozmowy i strukturę informacji zwrotnej (sytuacja – działanie – rezultat), opierając się na fragmentach źródeł i zaznaczając, że to propozycje. Nie proponuj ocen ani punktów.`;
 
 export function buildMessages(
   question: string,

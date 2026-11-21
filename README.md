@@ -210,8 +210,8 @@ author only (someone else's entry: 404). Lists are newest first.
 
 | Route                                  | What it does                                                                    |
 | -------------------------------------- | ------------------------------------------------------------------------------- |
-| `POST /api/assistant/ask`              | `{ question, assistant: FORMAL\|CONVERSATION, caseId?, stageId?, history? }` → answer + sources; `history`: earlier exchanges of the same chat, oldest first, `[{ question, answer }]` (only the last 3 are used, each field cut to 2000 chars; never stored or logged) |
-| `GET /api/assistant/suggestions`       | Example questions, `?stageId=` per stage                                        |
+| `POST /api/assistant/ask`              | `{ question, caseId?, stageId?, history? }` → answer + sources; one assistant for rules and talk preparation: with `caseId` the answer also uses the case and its stage; `assistant` (`FORMAL\|CONVERSATION`) is still accepted but ignored; `history`: earlier exchanges of the same chat, oldest first, `[{ question, answer }]` (only the last 3 are used, each field cut to 2000 chars; never stored or logged) |
+| `GET /api/assistant/suggestions`       | Example questions, `?stageId=` per stage: one list (rules and talk preparation, up to 6), talk questions first on `ASSESSMENT_TALK` |
 | `GET /api/assistant/documents`         | Every source document: `{ id, title, description, url, indexed, note }`         |
 | `GET /api/docs`                        | Same list                                                                       |
 | `GET /api/docs/<path>`                 | The original file from `docs/` (404 outside it: `..`, absolute paths, dotfiles) |

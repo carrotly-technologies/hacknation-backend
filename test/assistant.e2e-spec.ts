@@ -112,7 +112,6 @@ describe('Assistant (e2e, no LLM configured)', () => {
   it('prepares a talk for a case', async () => {
     const res = await ask({
       question: 'Pomóż przygotować rozmowę oceniającą',
-      assistant: 'CONVERSATION',
       caseId: 'c-001',
       stageId: 'ASSESSMENT_TALK',
     }).expect(200);
@@ -120,14 +119,36 @@ describe('Assistant (e2e, no LLM configured)', () => {
     expect(res.body.answer).toContain('Pytania do rozmowy:');
   });
 
+  it('answers a rule question in the same case with sources', async () => {
+    const res = await ask({
+      question: 'Ile dni ma oceniany na sprzeciw?',
+      caseId: 'c-001',
+      stageId: 'ASSESSMENT_TALK',
+    }).expect(200);
+    expect(res.body.grounded).toBe(true);
+    expect(res.body.sources.length).toBeGreaterThan(0);
+    expect(res.body.answer).not.toContain('Pytania do rozmowy:');
+  });
+
+  it('answers a talk question outside a case', async () => {
+    const res = await ask({
+      question: 'Jakie pytania zadać na rozmowie oceniającej?',
+    }).expect(200);
+    expect(res.body.grounded).toBe(true);
+    expect(res.body.sources.length).toBeGreaterThan(0);
+  });
+
+  it('still accepts the legacy `assistant` field', async () => {
+    await ask({
+      question: 'Jak często sporządza się ocenę okresową?',
+      assistant: 'CONVERSATION',
+    }).expect(200);
+  });
+
   it('validates the body and the case', async () => {
     await ask({ question: '', assistant: 'FORMAL' }).expect(400);
     await ask({ question: 'Pytanie testowe', assistant: 'X' }).expect(400);
-    await ask({
-      question: 'Pytanie testowe',
-      assistant: 'CONVERSATION',
-      caseId: 'nope',
-    }).expect(404);
+    await ask({ question: 'Pytanie testowe', caseId: 'nope' }).expect(404);
   });
 
   it('GET /api/assistant/suggestions returns questions per stage', async () => {
@@ -137,6 +158,12 @@ describe('Assistant (e2e, no LLM configured)', () => {
     expect(res.body).toEqual(
       expect.arrayContaining([expect.stringMatching(/pierwszej oceny/)]),
     );
+    const talk = await withToken(app, token)
+      .get('/api/assistant/suggestions?stageId=ASSESSMENT_TALK')
+      .expect(200);
+    expect(talk.body[0]).toMatch(/pytania zadać/);
+    expect(new Set(talk.body).size).toBe(talk.body.length);
+    expect(talk.body.length).toBeLessThanOrEqual(6);
     await withToken(app, token).get('/api/assistant/suggestions').expect(200);
     await withToken(app, token)
       .get('/api/assistant/suggestions?stageId=NOPE')

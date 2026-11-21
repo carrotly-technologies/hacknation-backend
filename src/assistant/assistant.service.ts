@@ -15,11 +15,12 @@ import {
 import type { AskInput } from './assistant.schemas.js';
 import { type AskResponse, DISCLAIMER, NOT_FOUND } from './assistant.types.js';
 import {
+  asksForTalkHelp,
   CONVERSATION_ADDENDUM,
   caseContext,
   conversationTemplate,
   STAGE_RULE_QUERY,
-  STAGE_SUGGESTIONS,
+  stageSuggestions,
 } from './conversation.rules.js';
 import {
   type ChatExchange,
@@ -43,19 +44,22 @@ export class AssistantService {
   ) {}
 
   suggestions(stageId?: StageId): string[] {
-    return STAGE_SUGGESTIONS[stageId ?? 'GENERAL'];
+    return stageSuggestions(stageId);
   }
 
+  /**
+   * One assistant for rules and talk preparation. In a case (that the caller
+   * may open) the answer also sees the case and its stage; elsewhere it is
+   * answered from the knowledge base alone. `input.assistant` is ignored.
+   */
   async ask(input: AskInput): Promise<AskResponse> {
     // Scoped: only a case the caller may open (403 otherwise).
     const detail = input.caseId ? await this.cases.view(input.caseId) : null;
     const history = input.history ?? [];
     // Without history the query is the question itself, as before.
     const query = await this.standalone(input.question, history);
-    if (input.assistant === 'CONVERSATION' && detail) {
-      return this.conversation(input, detail, history, query);
-    }
-    return this.formal(input.question, history, query);
+    if (detail) return this.inCase(input, detail, history, query);
+    return this.general(input.question, history, query);
   }
 
   /**
@@ -77,7 +81,7 @@ export class AssistantService {
     );
   }
 
-  private async formal(
+  private async general(
     question: string,
     history: ChatExchange[],
     query: string,
@@ -124,21 +128,41 @@ export class AssistantService {
     };
   }
 
-  private async conversation(
+  private async inCase(
     input: AskInput,
     detail: CaseDetail,
     history: ChatExchange[],
     query: string,
   ): Promise<AskResponse> {
     const stage = input.stageId ?? detail.currentStage;
+    const ratingRequest = asksForRatingDecision(input.question);
+    const talk = asksForTalkHelp(input.question);
     // Only the rules of the case's path: periodic (RO, PO) or first (RP, PP).
     const otherPath: KnowledgeDocId[] =
       detail.path === 'FIRST' ? ['RO', 'PO'] : ['RP', 'PP'];
-    let retrieval: Retrieval = retrieve(this.kb, query, otherPath);
+    let retrieval: Retrieval = retrieve(
+      this.kb,
+      ratingRequest
+        ? `${query} skala ocen cząstkowych poziom spełniania kryteriów`
+        : query,
+      otherPath,
+    );
+    if (!retrieval.grounded && !talk) {
+      // A rule question the knowledge base does not cover: say so.
+      return {
+        answer: NOT_FOUND,
+        grounded: false,
+        mode: 'EXTRACTIVE',
+        sources: [],
+        disclaimer: DISCLAIMER,
+      };
+    }
     if (!retrieval.grounded) {
+      // Talk help is backed by the rules of the stage.
       retrieval = retrieve(this.kb, STAGE_RULE_QUERY[stage], otherPath);
     }
     const sources = toSources(retrieval.hits, query);
+    const lead = ratingRequest ? `${RATING_REFUSAL}\n\n` : '';
     const messages = buildMessages(
       input.question,
       retrieval.hits,
@@ -147,10 +171,23 @@ export class AssistantService {
     messages[0].content += `\n\n${CONVERSATION_ADDENDUM}`;
     const reply = await this.llm.chat(withHistory(messages, history));
     if (reply) {
+      const notFound = saysNotFound(reply);
       return {
-        answer: sanitizeCitations(reply, sources.length),
-        grounded: retrieval.grounded,
+        answer:
+          lead +
+          (notFound ? NOT_FOUND : sanitizeCitations(reply, sources.length)),
+        grounded: !notFound && retrieval.grounded,
         mode: 'LLM',
+        sources: notFound ? [] : sources,
+        disclaimer: DISCLAIMER,
+      };
+    }
+    if (!talk) {
+      // A rule question: quotes of the sources, as outside a case.
+      return {
+        answer: extractiveAnswer(input.question, retrieval, sources),
+        grounded: true,
+        mode: 'EXTRACTIVE',
         sources,
         disclaimer: DISCLAIMER,
       };
@@ -159,10 +196,12 @@ export class AssistantService {
       .slice(0, 3)
       .map((s) => `[${s.n}] ${s.ref}: „${s.quote}”`);
     return {
-      answer: [
-        conversationTemplate(detail, stage),
-        ...(rules.length ? ['', 'Zasady z bazy wiedzy:', ...rules] : []),
-      ].join('\n'),
+      answer:
+        lead +
+        [
+          conversationTemplate(detail, stage),
+          ...(rules.length ? ['', 'Zasady z bazy wiedzy:', ...rules] : []),
+        ].join('\n'),
       grounded: retrieval.grounded,
       mode: 'EXTRACTIVE',
       sources,
