@@ -1,6 +1,11 @@
 import { RO_2016, RP_2015 } from '../assessments/assessment.format.js';
 import { analyseOsp } from '../osp/osp-analysis.rules.js';
 import { findOsp } from '../osp/osp.data.js';
+import {
+  ACK_LINK_VALID_DAYS,
+  ackTokenExpiresOn,
+  newAckToken,
+} from './ack-link.rules.js';
 import { effectiveStage, STAGE_NAMES } from './case.rules.js';
 import { CaseRuleError } from './case-rule.error.js';
 import {
@@ -143,9 +148,7 @@ export function actionBlocker(
       if (!DOCUMENT_STAGES.includes(stage)) {
         return `Najpierw zatwierdź ocenę (podpis oceniającego); dopiero zatwierdzoną ocenę przekazuje się do zapoznania. Sprawa jest na ${here}.`;
       }
-      if (record.sentForAckOn) {
-        return `Ocenę przekazano do zapoznania ${formatDatePl(record.sentForAckOn)}; czeka na potwierdzenie ocenianego.`;
-      }
+      // Again while not acknowledged: a new link replaces the previous one.
       return null;
     case 'EMPLOYEE_ACK_ASSESSMENT':
       if (!DOCUMENT_STAGES.includes(stage)) {
@@ -272,10 +275,18 @@ export function applyAction(
       log('Oceniający zatwierdził ocenę na piśmie. Pola oceny są zablokowane.');
       break;
     }
-    case 'SEND_FOR_ACK':
-      next.sentForAckOn = today;
-      log('Ocenę przekazano ocenianemu do zapoznania.');
+    case 'SEND_FOR_ACK': {
+      const again = !!next.ackToken;
+      next.sentForAckOn ??= today;
+      next.ackToken = newAckToken();
+      next.ackTokenExpiresOn = ackTokenExpiresOn(today);
+      log(
+        again
+          ? `Wygenerowano nowy link dla ocenianego, ważny do ${formatDatePl(next.ackTokenExpiresOn)}. Poprzedni link przestał działać.`
+          : `Ocenę przekazano ocenianemu do zapoznania. Wygenerowano link dla ocenianego, ważny ${ACK_LINK_VALID_DAYS} dni (do ${formatDatePl(next.ackTokenExpiresOn)}).`,
+      );
       break;
+    }
     case 'EMPLOYEE_ACK_ASSESSMENT': {
       next.acknowledgedOn = today;
       next.completedOn[

@@ -59,6 +59,8 @@ export function caseRecord(base: Required_ & Partial<CaseRecord>): CaseRecord {
     firstConditions: null,
     signedByEvaluatorOn: null,
     sentForAckOn: null,
+    ackToken: null,
+    ackTokenExpiresOn: null,
     acknowledgedOn: null,
     history: [],
     lastReminderOn: null,

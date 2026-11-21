@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AuthorizationModule } from '@nestjs/authorization';
+import { AckModule } from './ack/ack.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthenticationRoot, AuthModule } from './auth/auth.module.js';
 import { AppConfigModule } from './config/app-config.module.js';
@@ -33,6 +34,7 @@ import { SheetsModule } from './sheets/sheets.module.js';
     AssessmentsModule,
     OspModule,
     CasesModule,
+    AckModule,
     HrModule,
     AssistantModule,
     DocsModule,

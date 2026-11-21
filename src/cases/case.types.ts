@@ -202,6 +202,14 @@ export interface CaseDetail extends CaseSummary {
   evaluation: EvaluateResult | null;
   formalCheck: FormalCheckItem[];
   signedByEvaluatorOn: string | null;
+  sentForAckOn: string | null;
+  /**
+   * "/zapoznanie/{token}" for the case's evaluator while the assessed person
+   * has not confirmed yet; null for HR and everyone else. The token itself is
+   * never part of the case view.
+   */
+  ackLink: string | null;
+  ackLinkExpiresOn: string | null;
   acknowledgedOn: string | null;
   objectionDeadline: Deadline | null;
   history: HistoryEntry[];
@@ -250,6 +258,9 @@ export interface CaseRecord {
   firstConditions: FirstConditions | null;
   signedByEvaluatorOn: string | null;
   sentForAckOn: string | null;
+  /** Secret of the link for the assessed person (ack-link.rules.ts). */
+  ackToken: string | null;
+  ackTokenExpiresOn: string | null;
   acknowledgedOn: string | null;
   history: HistoryEntry[];
   lastReminderOn: string | null;

@@ -134,6 +134,8 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
 | `POST /api/demo/reset`           | Restores the seed (cases and the journal)                                                |
+| `GET /api/ack/:token`            | Public (no sign-in): the read-only sheet for the assessed person, or `{ acknowledgedOn, objectionDeadline }` once confirmed; 404 for an unknown, replaced or expired link |
+| `POST /api/ack/:token`           | Public: `{ confirmed: true }` → `EMPLOYEE_ACK_ASSESSMENT` today, `{ acknowledgedOn, objectionDeadline }`; 400 without `confirmed: true`, 404 as above; a repeat returns the first date |
 
 - Rules are pure functions with unit tests in `src/cases/*.rules.ts`: deadlines (`deadlines.rules.ts`, KC term rules
   incl. shifting from Saturdays, Sundays and holidays, each `Deadline` with `legalBasis`), stages
@@ -154,6 +156,12 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
   - The formal check item `PROMOTION_REQUEST` requires an answer and, with YES, a complete part III.
 - 409 body: `{ statusCode, error, message }` (+ `formalCheck` with the failing items for `SIGN_ASSESSMENT`).
 - `CaseDetail` also carries `availableActions` (actions legal right now), an addition to the contract.
+- Link for the assessed person (`src/cases/ack-link.rules.ts`, `src/ack`): `SEND_FOR_ACK` (after the evaluator's
+  signature) generates a token (`crypto.randomBytes(32)`, base64url) valid 14 days; calling it again before the
+  confirmation replaces the token, so the previous link stops working. `CaseDetail.ackLink` (`/zapoznanie/{token}`, a
+  frontend path) and `ackLinkExpiresOn` are filled only for the case's evaluator and only until the confirmation; the
+  token itself is never in the case view. `GET /api/ack/:token` returns only what the sheet prints (no ids,
+  observations, indicator ratings, OSP or history). `CaseDetail.sentForAckOn` is the date of the first handover.
 - Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` („Wstępny formularz”: the evaluator reviews the proposed sheet and
   criteria, may change them with PATCH, then `ACCEPT_SHEET`) → `OPENING_TALK` → … `ACCEPT_OSP_ANALYSIS` now moves the
   case to `SHEET_PROPOSAL`; cases already past it report its `completedOn` as the OSP analysis date.
