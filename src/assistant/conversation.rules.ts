@@ -155,9 +155,20 @@ export function conversationTemplate(
   return out.join('\n');
 }
 
-export const CONVERSATION_ADDENDUM = `Tryb asystenta rozmowy: pomagasz przygotować rozmowę z pracownikiem. Na podstawie kontekstu sprawy możesz proponować pytania do rozmowy, strukturę informacji zwrotnej (sytuacja – działanie – rezultat) i pomysły do IPRZ – zaznacz, że to propozycje. Zasady i terminy podawaj wyłącznie z fragmentów źródeł, z numerem [n]. Nie proponuj ocen ani punktów.`;
+export const CONVERSATION_ADDENDUM = `Pytanie zadano w teczce konkretnej sprawy (kontekst sprawy w wiadomości). Na pytania o procedurę, terminy i przepisy odpowiadaj jak zwykle, wyłącznie z fragmentów źródeł, z numerem [n]. Gdy pytanie dotyczy przygotowania rozmowy z pracownikiem, na podstawie kontekstu sprawy możesz proponować pytania do rozmowy, strukturę informacji zwrotnej (sytuacja – działanie – rezultat) i pomysły do IPRZ – zaznacz, że to propozycje. Nie proponuj ocen ani punktów.`;
 
-/** Example questions per stage, for the assistant panel. */
+const TALK_HELP =
+  /pytani|przygotow|pomóż|pomoz|zaproponuj|podpowiedz|informacj\p{L}* zwrotn|feedback|mocn\p{L}* stron|obszar\p{L}* (do )?rozwoj|argument|jak rozmawia|jak omówi|jak przekaz/iu;
+
+/**
+ * Whether the question asks for help with a talk (questions, feedback, IPRZ
+ * ideas) rather than for a rule: without a language model, such a question
+ * in a case gets the talk template instead of quotes of the sources.
+ */
+export const asksForTalkHelp = (question: string): boolean =>
+  TALK_HELP.test(question);
+
+/** Example rule questions per stage. */
 export const STAGE_SUGGESTIONS: Record<StageId | 'GENERAL', string[]> = {
   GENERAL: [
     'Kto podlega ocenie okresowej?',
@@ -226,3 +237,59 @@ export const STAGE_SUGGESTIONS: Record<StageId | 'GENERAL', string[]> = {
     'Co oznacza negatywna pierwsza ocena dla umowy o pracę?',
   ],
 };
+
+/** Example talk-preparation questions per stage. */
+export const TALK_SUGGESTIONS: Partial<Record<StageId | 'GENERAL', string[]>> =
+  {
+    GENERAL: [
+      'Jak przygotować się do rozmowy oceniającej?',
+      'Jak przekazać trudną informację zwrotną?',
+    ],
+    OSP_ANALYSIS: ['Jak wyjaśnić pracownikowi wybór kryteriów dodatkowych?'],
+    SHEET_PROPOSAL: ['Jak wyjaśnić pracownikowi wybór kryteriów dodatkowych?'],
+    OPENING_TALK: [
+      'Zaproponuj pytania otwierające rozmowę rozpoczynającą.',
+      'Jak ustalić z pracownikiem oczekiwania na okres oceny?',
+    ],
+    OBSERVATION: [
+      'Jak zapisywać obserwacje, żeby były obiektywne?',
+      'Jak udzielać bieżącej informacji zwrotnej?',
+    ],
+    ASSESSMENT: ['Jak omówić obszar do rozwoju bez demotywowania?'],
+    ASSESSMENT_TALK: [
+      'Jakie pytania zadać ocenianemu na rozmowie oceniającej?',
+      'Jak przekazać informację zwrotną o mocnych stronach i obszarach do rozwoju?',
+      'Jak uporządkować argumenty uzasadniające ocenę?',
+    ],
+    JUSTIFICATION: ['Zaproponuj działania rozwojowe do IPRZ.'],
+    DOCUMENT: ['Jak rozmawiać z pracownikiem, który nie zgadza się z oceną?'],
+    INTRO_TALK: [
+      'Zaproponuj pytania do rozmowy wstępnej z nowym pracownikiem.',
+    ],
+    REPORT: ['O co zapytać pracownika na podstawie sprawozdania?'],
+    FIRST_ASSESSMENT: ['Jak omówić pierwszą ocenę z nowym pracownikiem?'],
+  };
+
+/** Longest list of example questions the panel shows. */
+export const MAX_SUGGESTIONS = 6;
+
+/**
+ * One list per stage for the single assistant: rule questions and talk
+ * questions, without duplicates; on the assessment talk the talk ones first.
+ */
+export function stageSuggestions(stageId?: StageId): string[] {
+  const key = stageId ?? 'GENERAL';
+  const rules = STAGE_SUGGESTIONS[key];
+  const talk = TALK_SUGGESTIONS[key] ?? [];
+  const ordered =
+    key === 'ASSESSMENT_TALK' ? [...talk, ...rules] : [...rules, ...talk];
+  const seen = new Set<string>();
+  return ordered
+    .filter((q) => {
+      const k = q.toLowerCase().replace(/[?.!\s]+$/, '');
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    })
+    .slice(0, MAX_SUGGESTIONS);
+}

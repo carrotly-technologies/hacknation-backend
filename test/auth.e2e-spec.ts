@@ -174,7 +174,6 @@ describe('Authentication, roles and permissions (e2e)', () => {
         .post('/api/assistant/ask')
         .send({
           question: 'Jak przekazać informację zwrotną?',
-          assistant: 'CONVERSATION',
           caseId: 'c-001',
         })
         .expect(403);

@@ -42,7 +42,7 @@ describe('AssistantService', () => {
   });
 
   const ask = (question: string, extra = {}) =>
-    service.ask({ question, assistant: 'FORMAL', ...extra });
+    service.ask({ question, ...extra });
 
   it('answers extractively when the LLM is not available', async () => {
     chat.mockResolvedValue(null);
@@ -99,7 +99,6 @@ describe('AssistantService', () => {
     chat.mockResolvedValue(null);
     const res = await service.ask({
       question: 'Jakie pytania zadać na rozmowie oceniającej?',
-      assistant: 'CONVERSATION',
       caseId: 'c-001',
     });
     expect(res.mode).toBe('EXTRACTIVE');
@@ -114,13 +113,12 @@ describe('AssistantService', () => {
     chat.mockResolvedValue('Propozycje pytań [1].');
     const res = await service.ask({
       question: 'Jak przekazać informację zwrotną?',
-      assistant: 'CONVERSATION',
       caseId: 'c-001',
     });
     expect(res.mode).toBe('LLM');
     const [messages] = chat.mock.calls[0];
     expect(messages[1].content).toContain('Kontekst sprawy');
-    expect(messages[0].content).toContain('Tryb asystenta rozmowy');
+    expect(messages[0].content).toContain('teczce konkretnej sprawy');
     const { person } = cases.detail('c-001');
     const prompt = messages.map((m) => m.content).join('\n');
     expect(prompt).not.toContain(person.lastName);
@@ -202,7 +200,6 @@ describe('AssistantService', () => {
         .mockResolvedValueOnce('Propozycje [1].');
       await service.ask({
         question: 'a o mocnych stronach?',
-        assistant: 'CONVERSATION',
         caseId: 'c-001',
         history: [
           {
@@ -212,7 +209,7 @@ describe('AssistantService', () => {
         ],
       });
       const [messages] = chat.mock.calls[1];
-      expect(messages[0].content).toContain('Tryb asystenta rozmowy');
+      expect(messages[0].content).toContain('teczce konkretnej sprawy');
       expect(messages[1]).toEqual({
         role: 'user',
         content: 'Jak przekazać informację zwrotną?',
@@ -220,20 +217,90 @@ describe('AssistantService', () => {
     });
   });
 
+  describe('one assistant for rules and talks', () => {
+    it('answers a rule question in a case with sources, not a talk plan', async () => {
+      chat.mockResolvedValue(null);
+      const res = await ask('Ile dni ma oceniany na sprzeciw?', {
+        caseId: 'c-001',
+        stageId: 'ASSESSMENT_TALK',
+      });
+      expect(res).toMatchObject({ mode: 'EXTRACTIVE', grounded: true });
+      expect(res.sources.length).toBeGreaterThan(0);
+      expect(res.answer).toContain('[1]');
+      expect(res.answer).not.toContain('Pytania do rozmowy:');
+    });
+
+    it('answers a rule question in a case with the LLM, case context included', async () => {
+      chat.mockResolvedValue('Sprzeciw w terminie 7 dni [1].');
+      const res = await ask('Ile dni ma oceniany na sprzeciw?', {
+        caseId: 'c-001',
+      });
+      expect(res).toMatchObject({ mode: 'LLM', grounded: true });
+      expect(res.sources.length).toBeGreaterThan(0);
+      const [messages] = chat.mock.calls[0];
+      expect(messages[0].content).toContain('Nie proponuj ocen ani punktów');
+      expect(messages[0].content).toContain(
+        'Nie znalazłem tego w bazie wiedzy',
+      );
+      expect(messages[1].content).toContain('Kontekst sprawy');
+    });
+
+    it('answers a talk question outside a case', async () => {
+      chat.mockResolvedValue(null);
+      const res = await ask('Jakie pytania zadać na rozmowie oceniającej?');
+      expect(res.grounded).toBe(true);
+      expect(res.sources.length).toBeGreaterThan(0);
+      expect(res.disclaimer).toMatch(/doradcz/);
+    });
+
+    it('says "not in the knowledge base" in a case too', async () => {
+      const res = await ask('Jak upiec sernik?', { caseId: 'c-001' });
+      expect(res).toMatchObject({ grounded: false, answer: NOT_FOUND });
+      expect(chat).not.toHaveBeenCalled();
+    });
+
+    it('never decides a rating in a case', async () => {
+      chat.mockResolvedValue('Skala ocen to 1–5 [1].');
+      const res = await ask(
+        'Jaką ocenę powinienem dać pracownikowi za komunikację?',
+        { caseId: 'c-001' },
+      );
+      expect(res.answer).toMatch(/^Nie mogę rozstrzygnąć/);
+    });
+
+    it('ignores the legacy `assistant` field', async () => {
+      chat.mockResolvedValue(null);
+      const formal = await ask('Jakie pytania zadać na rozmowie oceniającej?', {
+        assistant: 'FORMAL',
+        caseId: 'c-001',
+      });
+      expect(formal.answer).toContain('Pytania do rozmowy:');
+    });
+  });
+
   it('404s for an unknown case', async () => {
     await expect(
       service.ask({
         question: 'Pytanie testowe',
-        assistant: 'CONVERSATION',
         caseId: 'nope',
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('suggests questions per stage', () => {
+  it('suggests one list per stage, talk questions first on the assessment talk', () => {
     expect(service.suggestions('OPENING_TALK')[0]).toMatch(
       /rozmowie rozpoczynającej/,
     );
-    expect(service.suggestions().length).toBeGreaterThan(0);
+    const talk = service.suggestions('ASSESSMENT_TALK');
+    expect(talk[0]).toMatch(/pytania zadać/);
+    expect(talk).toEqual(
+      expect.arrayContaining([expect.stringMatching(/Co omawia się/)]),
+    );
+    expect(new Set(talk).size).toBe(talk.length);
+    for (const stage of [undefined, 'OPENING_TALK', 'DOCUMENT'] as const) {
+      const list = service.suggestions(stage);
+      expect(list.length).toBeGreaterThanOrEqual(2);
+      expect(list.length).toBeLessThanOrEqual(6);
+    }
   });
 });
