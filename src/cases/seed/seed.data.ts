@@ -476,12 +476,8 @@ function afterNegativeCase(r: Rel): CaseRecord {
     cycleStart: { kind: 'PREVIOUS_NEGATIVE', assessedOn, acknowledgedOn },
     stage: 'OPENING_TALK',
     completedOn: { OSP_ANALYSIS: r.days(-2) },
-    partI: {
-      ...emptyPartI(),
-      // Topics, expectations and the assessment date stay empty: the
-      // supervisor fills part I by hand at the opening talk.
-      additionalCriteria: ['myslenie_analityczne'],
-    },
+    // Part I stays empty (no additional criteria either): the supervisor
+    // fills it by hand at the opening talk.
     history: [
       {
         date: assessedOn,
