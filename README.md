@@ -18,6 +18,7 @@ cp .env.example .env   # optional, defaults work out of the box
 | `FEATURE_ASSISTANT` | `true`                  | AI assistant chat; `false` hides it and 404s `/api/assistant/*` |
 | `JWT_SECRET`        | dev-only default        | HS256 key for sign-in tokens (32+ bytes: `openssl rand -base64 32`); without it a warning is logged |
 | `DATABASE_URL`      | (unset)                 | PostgreSQL URL; unset = in-memory storage (lost on restart)     |
+| `OFFICE_PLACE`      | `Warszawa` (demo)       | "miejscowość" printed next to signature dates in the downloaded sheet (PDF/DOCX) |
 
 ### Database (optional)
 
@@ -134,9 +135,18 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
 | `POST /api/demo/reset`           | Restores the seed (cases and the journal)                                                |
+| `GET /api/cases/:id/sheet.pdf`   | The filled periodic sheet (A/B/C, parts I–III) as a PDF (Open Sans embedded); who may read the case may download it (403/404 as `GET /api/cases/:id`, 409 for the first assessment) |
+| `GET /api/cases/:id/sheet.docx`  | The same sheet as DOCX (Word, LibreOffice)                                                |
 | `GET /api/ack/:token`            | Public (no sign-in): the read-only sheet for the assessed person, or `{ acknowledgedOn, objectionDeadline }` once confirmed; 404 for an unknown, replaced or expired link |
 | `POST /api/ack/:token`           | Public: `{ confirmed: true }` → `EMPLOYEE_ACK_ASSESSMENT` today, `{ acknowledgedOn, objectionDeadline }`; 400 without `confirmed: true`, 404 as above; a repeat returns the first date |
 
+- Sheet files (`src/export/`): built from the same case data as the sheet preview in the frontend and the fixed texts
+  of the sheet `template`; PDF with [pdfmake](https://github.com/bpampuch/pdfmake) (MIT), DOCX with
+  [docx](https://github.com/dolanmiu/docx) (MIT), so no browser or office suite is needed in the container.
+  `Content-Disposition: attachment; filename="Arkusz-C-Dabrowska-Ewa-2026-11-21.pdf"; filename*=UTF-8''…` (the
+  date is the day of download; CORS exposes the header). Until the evaluator signs, the name ends with
+  `-wersja-robocza` and every page has a „WERSJA ROBOCZA” header. The PDF embeds Open Sans from `assets/fonts/`
+  (SIL Open Font License 1.1, `assets/fonts/OFL.txt`), so Polish letters never depend on the viewer.
 - Rules are pure functions with unit tests in `src/cases/*.rules.ts`: deadlines (`deadlines.rules.ts`, KC term rules
   incl. shifting from Saturdays, Sundays and holidays, each `Deadline` with `legalBasis`), stages
   (`stages.rules.ts`), actions (`actions.rules.ts`), PATCH locks (`patch.rules.ts`) and the formal check

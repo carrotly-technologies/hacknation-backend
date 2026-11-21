@@ -12,6 +12,7 @@ import { CasesModule } from './cases/cases.module.js';
 import { CivilServiceGradesModule } from './civil-service-grades/civil-service-grades.module.js';
 import { DatabaseModule } from './database/database.module.js';
 import { DocsModule } from './docs/docs.module.js';
+import { ExportModule } from './export/export.module.js';
 import { HealthModule } from './health/health.module.js';
 import { HrModule } from './hr/hr.module.js';
 import { JournalModule } from './journal/journal.module.js';
@@ -35,6 +36,7 @@ import { SheetsModule } from './sheets/sheets.module.js';
     OspModule,
     CasesModule,
     AckModule,
+    ExportModule,
     HrModule,
     AssistantModule,
     DocsModule,

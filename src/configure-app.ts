@@ -10,5 +10,7 @@ export function configureApp(app: INestApplication): void {
   app.useGlobalPipes(new StandardSchemaValidationPipe());
   app.enableCors({
     origin: config.get<string>('FRONTEND_URL', DEFAULT_FRONTEND_URL),
+    // The frontend reads the file name of a downloaded sheet (export module).
+    exposedHeaders: ['Content-Disposition'],
   });
 }

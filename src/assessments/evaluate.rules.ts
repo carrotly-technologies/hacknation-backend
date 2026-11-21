@@ -91,7 +91,11 @@ export function validateEvaluation(
   return errors;
 }
 
-const PERIODIC_BANDS: readonly {
+/**
+ * Bands of the overall level, compared on the exact average (§11 ust. 1 pkt 2
+ * rozp. 2016); also the rows of "PRZYZNANIE OCENY" on the printed sheet.
+ */
+export const PERIODIC_BANDS: readonly {
   max: number;
   points: number;
   range: string;
