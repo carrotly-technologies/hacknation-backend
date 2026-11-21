@@ -20,4 +20,11 @@ describe('text normalization', () => {
       ...tokenize('miesiące'),
     ]);
   });
+
+  it('drops the fixed phrase "z uwzględnieniem" but keeps the noun', () => {
+    expect(tokenize('plan szkoleń z uwzględnieniem IPRZ')).toEqual(
+      tokenize('plan szkoleń IPRZ'),
+    );
+    expect(tokenize('uwzględnienie sprzeciwu')).toHaveLength(2);
+  });
 });

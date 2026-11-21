@@ -1,16 +1,18 @@
 // One-off ingestion: turns the source documents in docs/ (acts, regulations,
-// KPRM guides, assessment sheets, deadline notes, Q&A set) into a typed TS
+// KPRM guides, HR management standards, assessment sheets, deadline notes,
+// Q&A set) into a typed TS
 // module with text chunks (src/assistant/data/knowledge.data.ts), so the app
 // needs no runtime reads.
 //
 // Acts are chunked by legal unit (art./§ + ust.), guides by page (split on
-// paragraphs when long), sheets by section, the deadline note by paragraph,
-// Q&A by question, the competency model by competency and by indicator.
+// paragraphs when long), the HR management standards by part and point, sheets
+// by section, the deadline note by paragraph, Q&A by question, the competency
+// model by competency and by indicator.
 //
-// Reads only from docs/ in this repo. The civil service act (U), the deadline
-// note (LT) and the Q&A set (QA) are not in docs/ yet: while a file is missing,
-// the chunks of that document already in knowledge.data.ts are kept as they
-// are. Drop the file at its path below and re-run to re-ingest it.
+// Reads only from docs/ in this repo. The deadline note (LT) and the Q&A set
+// (QA) are not in docs/ yet: while a file is missing, the chunks of that
+// document already in knowledge.data.ts are kept as they are. Drop the file at
+// its path below and re-run to re-ingest it.
 //
 // Requires `pdftotext` (poppler) and `unzip` on PATH.
 // Usage: npm run kb:build
@@ -40,7 +42,13 @@ const P = {
   AP: 'tekst/pierwsza-ocena/arkusz-pierwszej-oceny.txt',
   // The competency model: the text version of model-kompetencji.xlsx.
   MK: 'tekst/model-kompetencji/model-kompetencji.txt',
+  // HR management standards: the text version of standardy-zzl.pdf (a scan;
+  // its first two pages have no text layer and were OCR-ed, see docs/README.md).
+  SZ: 'tekst/akty-prawne/standardy-zzl.txt',
 };
+
+/** The amendment of the standards (zarządzenie nr 7 of 16.12.2020). */
+const SZ_AMENDMENT = 'tekst/akty-prawne/standardy-zzl-zmiana-2020.txt';
 
 export const DOCS = {
   U: {
@@ -92,6 +100,11 @@ export const DOCS = {
   MK: {
     title: 'Model kompetencji w służbie cywilnej',
     of: 'Model kompetencji',
+  },
+  SZ: {
+    title:
+      'Standardy zarządzania zasobami ludzkimi w służbie cywilnej (zał. do zarządzenia nr 6 Szefa Służby Cywilnej z dnia 12 marca 2020 r., zm. zarządzeniem nr 7 z dnia 16 grudnia 2020 r.)',
+    of: 'standardów ZZL',
   },
 };
 
@@ -276,6 +289,21 @@ const TOPICS = {
     'art. 86': 'stopnie służbowe urzędników',
     'art. 89': 'kolejny stopień służbowy, dwie najwyższe oceny, wynagrodzenie',
   },
+  SZ: {
+    'cz. I pkt 3':
+      'brak dyrektora generalnego, kierownik urzędu zamiast dyrektora generalnego',
+    'cz. I pkt 4': 'informacja zwrotna od przełożonego',
+    'cz. III pkt 1':
+      'kompetencje kierownicze, wyższe stanowisko, obsadzanie stanowisk kierowniczych',
+    'cz. III pkt 6': 'służba przygotowawcza, egzamin, komisja egzaminacyjna',
+    'cz. IV pkt 1': 'wynagrodzenie zasadnicze, ocena pracy, poziom kompetencji',
+    'cz. IV pkt 6':
+      'system informacji zwrotnej, informacja bieżąca i cykliczna',
+    'cz. VI pkt 1':
+      'badanie potrzeb rozwojowych, wnioski z ocen okresowych, rozmowy rozwojowe',
+    'cz. VII pkt 3':
+      'odejście z pracy, ocena okresowa na wniosek odchodzącego pracownika, opinia o pracy',
+  },
 };
 
 const chunks = [];
@@ -344,9 +372,12 @@ function ingestAct(doc, { unitRe, unitLabel, pageLabel, marginCol, annexRe }) {
     const chap = /^\s*Rozdział (\d+[a-z]*)\s*$/.exec(line);
     if (chap) {
       flush();
-      const title = (
-        lines[i + 2]?.line.trim() ? lines[i + 2] : lines[i + 1]
-      )?.line.trim();
+      // The title is the next non-empty line (poppler releases differ in
+      // whether they keep the blank line between them), unless a unit
+      // starts right away.
+      const next = lines.slice(i + 1).find((l) => l.line.trim());
+      const title =
+        next && !unitRe.test(next.line) ? next.line.trim() : undefined;
       chapter = `Rozdział ${chap[1]}${title ? ` ${title}` : ''}`;
       continue;
     }
@@ -434,6 +465,132 @@ function ingestGuide(doc, { skipPages = [] } = {}) {
       });
     }
   });
+}
+
+// ----------------------------------------------------------- standards
+
+/** A part of the annex: "VI. ROZWÓJ I SZKOLENIA". */
+const PART = /^(I|II|III|IV|V|VI|VII|VIII|IX|X)\. (\p{Lu}[\p{Lu} ,-]+)$/u;
+
+/** "ROZWÓJ I SZKOLENIA" -> "Rozwój i szkolenia". */
+const sentenceCase = (s) => s.charAt(0) + s.slice(1).toLowerCase();
+
+/** Pages of a text version ("--- page N ---"), each with its printed number. */
+function textPages(rel) {
+  return readFileSync(resolve(root, rel), 'utf8')
+    .split(/^--- page (\d+) ---\n/m)
+    .slice(1)
+    .reduce((pages, part, i, all) => {
+      if (i % 2) return pages;
+      const lines = all[i + 1].trimEnd().split('\n');
+      // The printed page number is the last line of the page, when there is one.
+      const printed = /^\d{1,3}$/.test(lines.at(-1) ?? '')
+        ? Number(lines.pop())
+        : null;
+      pages.push({ page: Number(part), printed, lines });
+      return pages;
+    }, []);
+}
+
+/** Splits a long point before its "1)" / "a)" items, so chunks stay readable. */
+function splitItems(text, max) {
+  if (text.length <= max) return [text];
+  const out = [];
+  let cur = '';
+  for (const line of text.split('\n')) {
+    if (cur.length + line.length > max && /^(\d+|[a-z])\)/.test(line)) {
+      out.push(cur);
+      cur = '';
+    }
+    cur += (cur ? '\n' : '') + line;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+/**
+ * The new wording of cz. III pkt 1 from zarządzenie nr 7 (the text between
+ * „1. and ”.), which replaces the original point.
+ */
+function amendedPoint() {
+  const text = textPages(SZ_AMENDMENT)
+    .flatMap((p) => p.lines)
+    .join('\n');
+  const m = /„(1\. Obsadzanie[\s\S]+?)”\./.exec(text);
+  if (!m) throw new Error(`docs/${SZ_AMENDMENT}: new wording not found`);
+  return m[1];
+}
+
+/**
+ * HR management standards: the ordinance itself, then the annex chunked by
+ * part (its goals) and by point ("1. …"; the glossary of part I by its "1)"
+ * items). Refs carry the printed page; `page` is the PDF page for the link.
+ */
+function ingestStandards() {
+  const amended = { 'cz. III pkt 1': amendedPoint() };
+  let part = null; // { no, name }
+  let unit = null; // { id, ref, page, lines }
+  const flush = () => {
+    if (!unit) return;
+    const text = amended[unit.id] ?? unit.lines.join('\n');
+    for (const piece of splitItems(text, 1800)) {
+      push('SZ', unit.ref, piece, {
+        unit: unit.id,
+        // The amended wording is not in the PDF of zarządzenie nr 6.
+        page: amended[unit.id] ? undefined : unit.page,
+        section: part ? `cz. ${part.no} ${part.name}` : undefined,
+        keywords: TOPICS.SZ[unit.id],
+      });
+    }
+    unit = null;
+  };
+  /** Starts a unit of the annex: "cz. VI pkt 2 standardów ZZL („…”, s. 15)". */
+  const start = (id, label, { page, printed }, line) => {
+    flush();
+    const where = [
+      `„${part.name}”`,
+      !amended[id] && printed ? `s. ${printed}` : '',
+    ].filter(Boolean);
+    const changed = amended[id]
+      ? ', w brzmieniu zarządzenia nr 7 z dnia 16 grudnia 2020 r.'
+      : '';
+    const ref = `${label} ${DOCS.SZ.of} (${where.join(', ')})${changed}`;
+    unit = { id, ref, page, lines: [line] };
+  };
+
+  const [ordinance, ...annex] = textPages(P.SZ);
+  push(
+    'SZ',
+    'zarządzenie nr 6 Szefa Służby Cywilnej z dnia 12 marca 2020 r. (wprowadza standardy ZZL)',
+    ordinance.lines.join('\n'),
+    { unit: 'zarządzenie', page: ordinance.page },
+  );
+  for (const page of annex) {
+    for (const line of page.lines) {
+      const head = PART.exec(line.trim());
+      if (head) {
+        flush();
+        part = { no: head[1], name: sentenceCase(head[2].trim()) };
+        // Part I is the glossary; the other parts open with their goals.
+        if (part.no !== 'I') {
+          start(`cz. ${part.no}`, `cz. ${part.no} (cele)`, page, line);
+        }
+        continue;
+      }
+      if (!part) continue; // the annex header before part I
+      const point =
+        part.no === 'I'
+          ? /^(\d+)\)\s/.exec(line)
+          : /^(\d+)\.\s+\p{Lu}/u.exec(line);
+      if (point) {
+        const id = `cz. ${part.no} pkt ${point[1]}`;
+        start(id, id, page, line);
+        continue;
+      }
+      if (unit) unit.lines.push(line);
+    }
+  }
+  flush();
 }
 
 // ---------------------------------------------------------------- docx
@@ -691,6 +848,7 @@ ingestSheet('AB');
 ingestSheet('AC');
 ingestSheet('AP');
 ingestModel();
+ingestStandards();
 
 if (kept.length) {
   console.warn(

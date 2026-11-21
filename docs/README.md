@@ -12,6 +12,20 @@ do czytania przez agentów i jako baza wiedzy asystenta AI.
 | `zadanie/opis-zadania-kompas-kompetencji.pdf` | Pełna treść wyzwania: oczekiwany rezultat, wymagania formalne i techniczne, sposób testowania, kryteria oceny (25/25/20/20/10) |
 | `zadanie/regulamin-zadania.pdf` | Regulamin zadania: jury, nagrody, przeniesienie praw autorskich |
 
+## Akty prawne i standardy
+
+Pobrane 21.11.2026 z oficjalnych serwisów (akty prawne i dokumenty urzędowe nie są chronione prawem autorskim,
+art. 4 ustawy o prawie autorskim).
+
+| Plik | Co to jest | Źródło |
+|---|---|---|
+| `akty-prawne/ustawa-o-sluzbie-cywilnej.pdf` | Ustawa z 21.11.2008 r. o służbie cywilnej, tekst ujednolicony Kancelarii Sejmu opracowany na podstawie t.j. Dz.U. z 2026 r. poz. 590 (71 stron) | ISAP: [karta aktu](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20082271505), plik `https://api.sejm.gov.pl/eli/acts/DU/2008/1505/text/U/D20081505Lj.pdf`; urzędowy t.j.: `https://api.sejm.gov.pl/eli/acts/DU/2026/590/text.pdf` |
+| `akty-prawne/standardy-zzl.pdf` | Zarządzenie nr 6 Szefa Służby Cywilnej z 12.03.2020 r. w sprawie standardów zarządzania zasobami ludzkimi w służbie cywilnej, z załącznikiem (standardy, cz. I–VII). Skan; nadal obowiązuje według gov.pl | [gov.pl/web/sluzbacywilna/standardyzzl](https://www.gov.pl/web/sluzbacywilna/standardyzzl), plik `https://www.gov.pl/attachment/08ec7330-b7b0-479e-8df2-c209dc3c1f9a` |
+| `akty-prawne/standardy-zzl-zmiana-2020.pdf` | Zarządzenie nr 7 Szefa Służby Cywilnej z 16.12.2020 r.: nowe brzmienie cz. III pkt 1 standardów (obsadzanie stanowisk, na których kieruje się pracownikami) | ta sama strona gov.pl, plik `https://www.gov.pl/attachment/26c6d537-e334-44d7-8e1f-1123c7d55809` |
+
+Numery stron w odwołaniach do standardów (np. „cz. VI pkt 2, s. 15”) to numery wydrukowane na stronach załącznika;
+w pliku PDF to strona o jeden dalej (pierwsza strona pliku to samo zarządzenie).
+
 ## Model kompetencji
 
 | Plik | Co to jest |
@@ -49,7 +63,7 @@ Trzy przykładowe OSP z Ministerstwa Cyfryzacji, wejście do kroku „Analiza op
 
 ## Wersje tekstowe (`tekst/`)
 
-Wygenerowane z oryginałów (pypdf, python-docx, openpyxl):
+Wygenerowane z oryginałów (pypdf, python-docx, openpyxl; `akty-prawne/` przez `pdftotext` z poppler):
 
 - PDF: tekst strona po stronie, z nagłówkami `--- page N ---` (przydatne do cytowania źródła).
 - DOCX: akapity i tabele (komórki rozdzielone `|`, linie w komórce `/`). **Pola wyboru zapisane jako `[x]` / `[ ]`**, więc w OSP widać np. zaznaczoną liczbę podległych pracowników.
@@ -57,23 +71,29 @@ Wygenerowane z oryginałów (pypdf, python-docx, openpyxl):
 
 Po zmianie oryginałów wersje tekstowe trzeba wygenerować ponownie.
 
+`tekst/akty-prawne/standardy-zzl.txt`: dwie pierwsze strony skanu (zarządzenie i początek słownika pojęć) nie mają
+warstwy tekstowej, więc są odczytane przez OCR (tesseract) i poprawione ręcznie według skanu. Na pozostałych
+stronach punktory list zamieniono na `- `. W `standardy-zzl-zmiana-2020.txt` poprawiono ręcznie nagłówek
+(numer i datę zarządzenia wpisane odręcznie).
+
 ## Baza wiedzy asystenta
 
 `npm run kb:build` czyta wyłącznie z tego katalogu. Oryginały są dostępne w aplikacji pod
 `GET /api/docs/<ścieżka>`, a lista dokumentów (z informacją, czy asystent z nich odpowiada) pod
-`GET /api/assistant/documents`. Do odpowiedzi indeksowane są: oba rozporządzenia, oba poradniki, arkusze B, C
-i pierwszej oceny (z wersji tekstowych) oraz model kompetencji (z wersji tekstowej `model-kompetencji.xlsx`).
-Opis zadania, regulamin, grafika i przykładowe OSP są tylko na liście dokumentów.
+`GET /api/assistant/documents`. Do odpowiedzi indeksowane są: ustawa o służbie cywilnej (z PDF, artykułami i ustępami),
+oba rozporządzenia, oba poradniki, standardy ZZL (z wersji tekstowej, częściami i punktami; cz. III pkt 1
+w brzmieniu zarządzenia nr 7), arkusze B, C i pierwszej oceny (z wersji tekstowych) oraz model kompetencji
+(z wersji tekstowej `model-kompetencji.xlsx`). Opis zadania, regulamin, grafika, przykładowe OSP i samo zarządzenie
+zmieniające standardy są tylko na liście dokumentów.
 
 ## Czego tu brakuje
 
-Trzy dokumenty bazy wiedzy nie są jeszcze w repo. Ich fragmenty są w `src/assistant/data/knowledge.data.ts`
-(wygenerowane wcześniej z plików autora asystenta) i `kb:build` je zachowuje, dopóki pliku brak. Po dodaniu pliku
-pod wskazaną ścieżką `kb:build` przetworzy go od nowa:
+Dwa dokumenty bazy wiedzy nie są w repo, bo nie ma ich publicznie. Ich fragmenty są w
+`src/assistant/data/knowledge.data.ts` (wygenerowane wcześniej z plików autora asystenta) i `kb:build` je zachowuje,
+dopóki pliku brak. Po dodaniu pliku pod wskazaną ścieżką `kb:build` przetworzy go od nowa:
 
 | Dokument | Oczekiwana ścieżka | Do tego czasu |
 |---|---|---|
-| Ustawa o służbie cywilnej (`U`), tekst jednolity | `akty-prawne/ustawa-o-sluzbie-cywilnej.pdf` | link do oficjalnego tekstu w [ISAP](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20082271505) |
 | Zasady obliczania terminów (`LT`) | `materialy-dodatkowe/zasady-obliczania-terminow.docx` | bez linku, „brak pliku źródłowego” |
 | Zestaw pytań i odpowiedzi (`QA`) | `materialy-dodatkowe/pytania-i-odpowiedzi.md` | bez linku, „brak pliku źródłowego” |
 

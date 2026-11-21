@@ -8,6 +8,8 @@ export type KnowledgeDocId =
   | 'LT'
   | 'QA'
   | 'MK'
+  /** Standards of HR management in the civil service (Szef Służby Cywilnej). */
+  | 'SZ'
   /** Sheets: B and C of the periodic assessment, the first-assessment sheet. */
   | 'AB'
   | 'AC'
