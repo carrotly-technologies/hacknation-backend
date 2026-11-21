@@ -48,7 +48,7 @@ curl localhost:3000/api/health   # {"status":"ok"}
 ## Sign-in, roles and permissions
 
 Every `/api/*` route needs `Authorization: Bearer <token>` (401 without a valid one), except `GET /api/health`,
-`GET /api/config`, `POST /api/auth/login` and the document files `GET /api/docs/<path>` (public legal texts opened
+`GET /api/config`, `GET /api/branding/logo`, `POST /api/auth/login` and the document files `GET /api/docs/<path>` (public legal texts opened
 from answer links in a new tab). A route for another role answers 403.
 
 ```bash
@@ -70,7 +70,7 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 | `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*` |
 | `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only)                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*`, journal |
 | `ADMIN`      | `/api/admin/*`                                                                                        | cases, `/api/team`, `/api/hr/*`, journal                  |
-| every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP, `POST /api/demo/reset` | —                                                         |
+| every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP, `POST /api/demo/reset`, `PUT /api/branding/logo` | —                                                         |
 
 - The role is read from the account on every request, never from the token: a role changed by an ADMIN applies to
   that user's next request (the frontend picks it up at the next sign-in).
@@ -195,6 +195,18 @@ author only (someone else's entry: 404). Lists are newest first.
 | `POST /api/people/:personId/observations` | `{ date, criterionId, indicatorId?, kind, situation, action, result }` → observation (201); 400 for an unknown criterion, an indicator of another criterion, a date after today, S/D/R empty or over 2000 chars |
 | `PATCH /api/observations/:id`          | Any of those fields; the merged observation is validated again                            |
 | `DELETE /api/observations/:id`         | 204                                                                                       |
+
+### Branding: the accepted logo
+
+The logo the office accepted on the frontend page `/logo` (`src/branding`). Stored in PostgreSQL (`app_settings`,
+one JSON value per key, key `logo`) with `DATABASE_URL`, in memory without it. Not demo data: `POST /api/demo/reset`
+keeps it. The 15 allowed ids (the proposals whose SVGs live in the frontend) are `LOGO_IDS` in
+`src/branding/logos.ts`.
+
+| Route                    | What it does                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------ |
+| `GET /api/branding/logo` | Public: `{ logoId, acceptedAt, acceptedBy: { id, name } }`, all `null` until a logo is accepted  |
+| `PUT /api/branding/logo` | Every signed-in role: `{ logoId }` → the same shape, with the caller and now; 400 for an unknown id |
 
 ### AI assistant (source-grounded)
 
