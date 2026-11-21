@@ -232,6 +232,10 @@ author only (someone else's entry: 404). Lists are newest first.
   heuristic (a short question, one starting with „a”, „i”, „to”, „czy to” or with a pronoun like „go”, „jej”, „ten”
   gets the earlier question glued in front). The LLM also gets the earlier exchanges as the conversation, without their
   citation numbers; sources and citations still come only from the knowledge base. Without `history` nothing changes.
+- Query expansion: abbreviations and synonyms of the civil service (IPRZ, OSP, ZZL, DG, „ponowna ocena”, „odwołanie”
+  → sprzeciw, „formularz” → arkusz, …) are in one data file, `src/assistant/data/synonyms.data.ts`, each with its
+  source; `query-expansion.rules.ts` adds them to the question with a lower weight, so exact wording still wins.
+  To add a term, add an entry with its source (only wordings from `docs/`) and check `npm run eval:assistant`.
 - Generation: optional, any OpenAI-compatible endpoint via `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (see
   `.env.example`). Without it, or when the call fails, answers are extractive (`mode: "EXTRACTIVE"`).
 - The assistant is always on: there is no feature flag (without an LLM it answers extractively).

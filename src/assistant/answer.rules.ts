@@ -4,6 +4,7 @@ import { NOT_FOUND } from './assistant.types.js';
 import type { KnowledgeBase, SearchHit } from './knowledge-base.js';
 import type { KnowledgeDocId } from './knowledge.types.js';
 import type { ChatMessage } from './llm.client.js';
+import { expandedTerms } from './query-expansion.rules.js';
 import { tokenize } from './text-normalize.js';
 
 /** Below these the knowledge base is treated as not covering the question. */
@@ -105,7 +106,8 @@ export function selectQuote(
     .trim();
   if (flat.length <= max) return flat;
   const sentences = flat.split(/(?<=[.;])\s+(?=[\p{Lu}\d(„-])/u);
-  const terms = new Set(tokenize(question));
+  // With synonyms, so that "IPRZ" picks the sentence with the full name.
+  const terms = new Set(expandedTerms(question));
   const weight = sentences.map(
     (s) => tokenize(s).filter((t) => terms.has(t)).length,
   );
