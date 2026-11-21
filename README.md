@@ -15,7 +15,6 @@ cp .env.example .env   # optional, defaults work out of the box
 | `PORT`              | `3000`                  | Port the API listens on                                         |
 | `FRONTEND_URL`      | `http://localhost:5173` | Origin allowed by CORS                                          |
 | `DEMO_TODAY`        | `2026-11-21`            | Demo "today" for all deadlines                                  |
-| `FEATURE_ASSISTANT` | `true`                  | AI assistant chat; `false` hides it and 404s `/api/assistant/*` |
 | `JWT_SECRET`        | dev-only default        | HS256 key for sign-in tokens (32+ bytes: `openssl rand -base64 32`); without it a warning is logged |
 | `DATABASE_URL`      | (unset)                 | PostgreSQL URL; unset = in-memory storage (lost on restart)     |
 | `OFFICE_PLACE`      | `Warszawa` (demo)       | "miejscowość" printed next to signature dates in the downloaded sheet (PDF/DOCX) |
@@ -213,7 +212,7 @@ author only (someone else's entry: 404). Lists are newest first.
 | `POST /api/assistant/ask`              | `{ question, assistant: FORMAL\|CONVERSATION, caseId?, stageId? }` → answer + sources |
 | `GET /api/assistant/suggestions`       | Example questions, `?stageId=` per stage                                        |
 | `GET /api/assistant/documents`         | Every source document: `{ id, title, description, url, indexed, note }`         |
-| `GET /api/docs`                        | Same list, always on (also with `FEATURE_ASSISTANT=false`)                      |
+| `GET /api/docs`                        | Same list                                                                       |
 | `GET /api/docs/<path>`                 | The original file from `docs/` (404 outside it: `..`, absolute paths, dotfiles) |
 
 - Every answer source has `url`: `/api/docs/<file>` (relative to the API origin, `#page=N` for a PDF excerpt), the
@@ -229,9 +228,8 @@ author only (someone else's entry: 404). Lists are newest first.
   score/coverage threshold the answer is "Nie znalazłem tego w bazie wiedzy" with `grounded: false`.
 - Generation: optional, any OpenAI-compatible endpoint via `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (see
   `.env.example`). Without it, or when the call fails, answers are extractive (`mode: "EXTRACTIVE"`).
-- Feature flag: `FEATURE_ASSISTANT=false` (Coolify env + restart) turns the chat off without a frontend rebuild.
-  `GET /api/config` returns `{ "features": { "assistant": boolean } }` and the frontend reads it on start; with the
-  flag off every `/api/assistant/*` route returns 404.
+- The assistant is always on: there is no feature flag (without an LLM it answers extractively).
+  `GET /api/config` stays for older frontends and always returns `{ "features": { "assistant": true } }`.
 - `npm run eval:assistant`: hit@5 of the 72 Q&A questions against their expected sources.
 
 ## Quality
@@ -251,8 +249,7 @@ as the `hacknation-backend` application, built from this repo's `Dockerfile`:
 
 - URL: <https://api.hacknation.rabbithole.carrotly.tech> (health: `/api/health`)
 - Every push to `main` triggers a new deploy (GitHub App source, auto-deploy on).
-- Env: `PORT=3000`, `FRONTEND_URL=https://hacknation.rabbithole.carrotly.tech`, `JWT_SECRET` (32+ random bytes),
-  optional `FEATURE_ASSISTANT=false`.
+- Env: `PORT=3000`, `FRONTEND_URL=https://hacknation.rabbithole.carrotly.tech`, `JWT_SECRET` (32+ random bytes).
   Change them in the Coolify app settings and redeploy.
 
 Build and run the image locally:
