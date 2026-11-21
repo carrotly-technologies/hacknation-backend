@@ -17,6 +17,7 @@ import { HealthModule } from './health/health.module.js';
 import { HrModule } from './hr/hr.module.js';
 import { JournalModule } from './journal/journal.module.js';
 import { OspModule } from './osp/osp.module.js';
+import { PeopleModule } from './people/people.module.js';
 import { SheetsModule } from './sheets/sheets.module.js';
 
 @Module({
@@ -42,6 +43,7 @@ import { SheetsModule } from './sheets/sheets.module.js';
     DocsModule,
     AdminModule,
     JournalModule,
+    PeopleModule,
   ],
 })
 export class AppModule {}

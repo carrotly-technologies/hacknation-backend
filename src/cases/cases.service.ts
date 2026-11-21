@@ -18,6 +18,7 @@ import type {
   CaseRecord,
   CaseSummary,
   Deadline,
+  Evaluator,
   StageId,
 } from './case.types.js';
 import { toDetail, toSummary } from './case-view.js';
@@ -205,6 +206,10 @@ export class CasesService {
 
   evaluatorName(record: CaseRecord): string {
     return fullName(this.store.evaluator(record.evaluatorId));
+  }
+
+  evaluatorOf(record: CaseRecord): Evaluator {
+    return this.store.evaluator(record.evaluatorId);
   }
 
   /** Domain errors -> HTTP: 409 for rules and locks, 400 for bad values. */
