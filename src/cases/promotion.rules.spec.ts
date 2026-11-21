@@ -89,9 +89,13 @@ describe('previous assessment (part II item 10)', () => {
     ).toBeNull();
   });
 
-  it('is locked outside part II and in the first assessment', () => {
+  it('is a draft before signing, locked after it and in the first assessment', () => {
+    expect(
+      applyPatch(seed('c-003'), { previousAssessment: null }, TODAY)
+        .previousAssessment,
+    ).toBeNull();
     expect(() =>
-      applyPatch(seed('c-003'), { previousAssessment: null }, TODAY),
+      applyPatch(seed('c-002'), { previousAssessment: null }, TODAY),
     ).toThrow(CaseRuleError);
     expect(() =>
       applyPatch(seed('c-006'), { previousAssessment: null }, TODAY),

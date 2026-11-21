@@ -181,6 +181,31 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     });
   });
 
+  it('part II is a draft before the assessment talk, saved until signing', async () => {
+    for (const id of ['c-003', 'c-005']) {
+      await http()
+        .patch(`/api/cases/${id}`)
+        .send({
+          ratings: { komunikacja: { 'komunikacja.1': 5 } },
+          decisions: { komunikacja: 5 },
+          justification: 'Uzasadnienie robocze.',
+          iprz: 'Szkolenie robocze.',
+        })
+        .expect(200);
+      const res = await http().get(`/api/cases/${id}`).expect(200);
+      expect(res.body).toMatchObject({
+        currentStage: id === 'c-003' ? 'OBSERVATION' : 'OPENING_TALK',
+        ratings: { komunikacja: { 'komunikacja.1': 5 } },
+        decisions: { komunikacja: 5 },
+        justification: 'Uzasadnienie robocze.',
+        iprz: 'Szkolenie robocze.',
+      });
+      expect(res.body.availableActions).not.toContain('SIGN_ASSESSMENT');
+    }
+    const res = await act('c-003', 'SIGN_ASSESSMENT').expect(409);
+    expect(res.body.message).toContain('dopiero po rozmowie oceniającej');
+  });
+
   it('PATCH validates values (400) and stage locks (409)', async () => {
     let res = await http()
       .patch('/api/cases/c-001')

@@ -217,10 +217,85 @@ describe('patch locks and validation', () => {
     expect(error.message).toContain('Część I jest zablokowana');
   });
 
-  it('ratings are locked before the assessment stage', () => {
-    expect(() =>
-      applyPatch(seed('c-003'), { decisions: { komunikacja: 5 } }, TODAY),
-    ).toThrow(CaseRuleError);
+  it('part II is a draft before the assessment talk (OBSERVATION)', () => {
+    const r = applyPatch(
+      seed('c-003'),
+      {
+        ratings: { wykorzystywanie_wiedzy: { 'wykorzystywanie_wiedzy.1': 7 } },
+        decisions: { wykorzystywanie_wiedzy: 7 },
+        deviationNotes: { wykorzystywanie_wiedzy: 'Notatka robocza.' },
+        justification: 'Uzasadnienie robocze.',
+        iprz: 'Szkolenie z negocjacji.',
+        previousAssessment: { level: 'na poziomie oczekiwań' },
+        promotionRequest: { attached: 'NO' },
+      },
+      TODAY,
+    );
+    expect(r).toMatchObject({
+      stage: 'OBSERVATION',
+      decisions: { wykorzystywanie_wiedzy: 7 },
+      ratings: { wykorzystywanie_wiedzy: { 'wykorzystywanie_wiedzy.1': 7 } },
+      justification: 'Uzasadnienie robocze.',
+      iprz: 'Szkolenie z negocjacji.',
+      promotionRequest: { attached: 'NO' },
+    });
+    expect(r.completedOn.ASSESSMENT).toBeUndefined();
+    // Signing still needs the assessment talk.
+    expect(conflict(() => run(r, 'SIGN_ASSESSMENT')).message).toContain(
+      'dopiero po rozmowie oceniającej',
+    );
+  });
+
+  it('part II is a draft at the opening talk; criteria leaving part I are dropped', () => {
+    let r = applyPatch(
+      seed('c-005'),
+      {
+        partI: { additionalCriteria: ['kreatywnosc'] },
+        decisions: { komunikacja: 5, kreatywnosc: 7 },
+        ratings: { kreatywnosc: { 'kreatywnosc.1': 7 } },
+      },
+      TODAY,
+    );
+    expect(r.decisions).toEqual({ komunikacja: 5, kreatywnosc: 7 });
+    r = applyPatch(r, { partI: { additionalCriteria: [] } }, TODAY);
+    expect(r.decisions).toEqual({ komunikacja: 5 });
+    expect(r.ratings).toEqual({});
+  });
+
+  it('part II needs a sheet: refused at the OSP analysis', () => {
+    const error = conflict(() =>
+      applyPatch(seed('c-002'), { iprz: 'x' }, TODAY),
+    );
+    expect(error.message).toContain('gdy wybrany jest arkusz');
+  });
+
+  it('part II is locked after the evaluator signed', () => {
+    const signed = run(
+      applyPatch(
+        decideAll(seed('c-001')),
+        { iprz: 'Szkolenie.', promotionRequest: { attached: 'NO' } },
+        TODAY,
+      ),
+      'SIGN_ASSESSMENT',
+    );
+    for (const patch of [
+      { decisions: { komunikacja: 7 } },
+      { ratings: { komunikacja: { 'komunikacja.1': 7 as const } } },
+      { justification: 'Po podpisie.' },
+      { iprz: 'Po podpisie.' },
+    ]) {
+      expect(
+        conflict(() => applyPatch(signed, patch, TODAY)).message,
+      ).toContain('zablokowane');
+    }
+  });
+
+  it('first assessment: part II still opens with the assessment stage', () => {
+    expect(
+      conflict(() =>
+        applyPatch(seed('c-104'), { decisions: { komunikacja: 5 } }, TODAY),
+      ).message,
+    ).toContain('sprawozdania');
   });
 
   it('rejects more than 3, mandatory or unknown additional criteria (400)', () => {

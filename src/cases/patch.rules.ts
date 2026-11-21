@@ -23,26 +23,80 @@ import {
   mergePromotionRequest,
 } from './promotion.rules.js';
 
-const PART_II: readonly StageId[] = [
-  'ASSESSMENT',
-  'JUSTIFICATION',
-  'FIRST_ASSESSMENT',
-  'FIRST_CONDITIONS',
-];
 const LOCKED_NOTE =
   'Zmiana zablokowanego pola jest możliwa tylko w trybie korekty błędów przez administratora.';
 
-function partIIGuard(record: CaseRecord, field: string): void {
+/**
+ * Stages at which part II of a periodic sheet (ratings, partial scores,
+ * deviation notes, justification, IPRZ, previous assessment, part III) can be
+ * saved as a draft ("wersja robocza"): from the moment the sheet is known
+ * until the evaluator signs.
+ *
+ * - Poradnik „Oceny okresowe w służbie cywilnej”, s. 20, etap II „Ocenianie”
+ *   (cały okres podlegający ocenie): „przygotowanie bezpośrednio przed rozmową
+ *   oceniającą wypełnionego na roboczo arkusza oceny”.
+ * - §10 rozp. PRM z 4.04.2016 (Dz.U. 2016 poz. 470): „Przed sporządzeniem
+ *   oceny na piśmie oceniający przeprowadza z ocenianym rozmowę oceniającą…”;
+ *   §11 ust. 2: „Sporządzając ocenę na piśmie, oceniający bierze pod uwagę
+ *   wnioski z rozmowy oceniającej.” The draft stays editable after the talk;
+ *   the assessment "na piśmie" is made by the evaluator's signature
+ *   (SIGN_ASSESSMENT, still available only after START_ASSESSMENT).
+ * - §12 ust. 1: the employee is acquainted with the signed assessment, so the
+ *   sheet is locked from the signature on (DOCUMENT stage).
+ *
+ * Before 2026-11-21 part II was editable only at ASSESSMENT / JUSTIFICATION.
+ * Decision log: notatki/decyzje.md (to be confirmed with an expert).
+ */
+const PERIODIC_PART_II: readonly StageId[] = [
+  'SHEET_PROPOSAL',
+  'OPENING_TALK',
+  'OBSERVATION',
+  'ASSESSMENT',
+  'JUSTIFICATION',
+];
+
+/**
+ * First assessment keeps the old rule: the draft is prepared "na podstawie
+ * zgromadzonych w trakcie okresu podlegającego ocenie informacji oraz
+ * sprawozdania ocenianego" (Poradnik „Pierwsza ocena”, 2016, s. 27), and the
+ * report only exists once the FIRST_ASSESSMENT stage opens (§8 ust. 1 rozp.
+ * PRM z 23.07.2015, Dz.U. 2015 poz. 1144).
+ */
+const FIRST_PART_II: readonly StageId[] = [
+  'FIRST_ASSESSMENT',
+  'FIRST_CONDITIONS',
+];
+
+/** Whether part II of the sheet can be saved now (draft until signature). */
+export function partIIEditable(record: CaseRecord): boolean {
+  if (record.signedByEvaluatorOn || record.acknowledgedOn) return false;
   const stage = effectiveStage(record);
-  if (PART_II.includes(stage)) return;
+  if (record.path === 'FIRST') return FIRST_PART_II.includes(stage);
+  return record.sheetId !== null && PERIODIC_PART_II.includes(stage);
+}
+
+function partIIGuard(record: CaseRecord, field: string): void {
+  if (partIIEditable(record)) return;
   if (record.signedByEvaluatorOn) {
     throw new CaseRuleError(
       `Pole „${field}” jest zablokowane: ocenę zatwierdzono ${formatDatePl(record.signedByEvaluatorOn)}. ${LOCKED_NOTE}`,
     );
   }
+  const stage = effectiveStage(record);
   throw new CaseRuleError(
-    `Pole „${field}” wypełnia się na etapie rozmowy oceniającej i oceny; sprawa jest na etapie „${STAGE_NAMES[stage]}”. ${record.path === 'PERIODIC' ? 'Rozpocznij ocenę akcją „Rozpocznij rozmowę oceniającą”.' : 'Etap otwiera złożenie sprawozdania albo upływ terminu na jego złożenie.'}`,
+    record.path === 'PERIODIC'
+      ? `Pole „${field}” można wypełnić, gdy wybrany jest arkusz oceny; sprawa jest na etapie „${STAGE_NAMES[stage]}”. Zaakceptuj analizę opisu stanowiska, aby wybrać arkusz.`
+      : `Pole „${field}” wypełnia się na etapie rozmowy oceniającej i oceny; sprawa jest na etapie „${STAGE_NAMES[stage]}”. Etap otwiera złożenie sprawozdania albo upływ terminu na jego złożenie.`,
   );
+}
+
+/** Drops part II entries of criteria that left the case (sheet or part I changed). */
+function pruneCriteria(record: CaseRecord, criteria: Set<string>): void {
+  for (const map of [record.ratings, record.decisions, record.deviationNotes]) {
+    for (const id of Object.keys(map)) {
+      if (!criteria.has(id)) delete map[id];
+    }
+  }
 }
 
 /**
@@ -141,6 +195,13 @@ export function applyPatch(
   }
 
   const criteria = new Set(caseCriteria(next));
+  // Part II can be drafted before part I is confirmed (see partIIEditable).
+  if (
+    patch.partI?.additionalCriteria !== undefined ||
+    patch.sheetId !== undefined
+  ) {
+    pruneCriteria(next, criteria);
+  }
   const unknownCriterion = (id: string) =>
     `Kryterium „${criterionName(id)}” nie jest oceniane w tej sprawie (kryteria z części I: ${[...criteria].map((c) => `„${criterionName(c)}”`).join(', ')}).`;
 
