@@ -5,6 +5,12 @@ export interface AnswerSource {
   title: string;
   ref: string;
   quote: string;
+  /**
+   * Link to the original document: "/api/docs/<file>" (relative to the API
+   * origin, "#page=N" for a PDF excerpt), an official page, or null when the
+   * document has no file.
+   */
+  url: string | null;
 }
 
 export interface AskResponse {

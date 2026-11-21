@@ -1,4 +1,5 @@
 import type { AnswerSource } from './assistant.types.js';
+import { chunkUrl } from './documents.js';
 import { NOT_FOUND } from './assistant.types.js';
 import type { KnowledgeBase, SearchHit } from './knowledge-base.js';
 import type { KnowledgeDocId } from './knowledge.types.js';
@@ -143,6 +144,7 @@ export function toSources(hits: SearchHit[], question: string): AnswerSource[] {
     title: hit.chunk.title,
     ref: hit.chunk.ref,
     quote: selectQuote(quotable(hit), question, hit.chunk.qa ? 900 : QUOTE_MAX),
+    url: chunkUrl(hit.chunk),
   }));
 }
 

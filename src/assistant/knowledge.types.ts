@@ -1,6 +1,17 @@
 /** Source documents of the assistant's knowledge base. */
 export type KnowledgeDocId =
-  'U' | 'RO' | 'RP' | 'PO' | 'PP' | 'LT' | 'QA' | 'MK';
+  | 'U'
+  | 'RO'
+  | 'RP'
+  | 'PO'
+  | 'PP'
+  | 'LT'
+  | 'QA'
+  | 'MK'
+  /** Sheets: B and C of the periodic assessment, the first-assessment sheet. */
+  | 'AB'
+  | 'AC'
+  | 'AP';
 
 export interface QaMeta {
   no: number;

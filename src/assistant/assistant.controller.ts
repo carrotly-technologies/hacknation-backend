@@ -7,6 +7,7 @@ import {
 } from './assistant.schemas.js';
 import { AssistantService } from './assistant.service.js';
 import type { AskResponse } from './assistant.types.js';
+import { type DocumentListItem, listDocuments } from './documents.js';
 
 @Controller('assistant')
 export class AssistantController {
@@ -16,6 +17,12 @@ export class AssistantController {
   @HttpCode(200)
   ask(@Body({ schema: askSchema }) body: AskInput): Promise<AskResponse> {
     return this.assistant.ask(body);
+  }
+
+  /** The source documents: linked, and whether the assistant answers from them. */
+  @Get('documents')
+  documents(): DocumentListItem[] {
+    return listDocuments();
   }
 
   @Get('suggestions')

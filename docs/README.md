@@ -57,10 +57,24 @@ Wygenerowane z oryginałów (pypdf, python-docx, openpyxl):
 
 Po zmianie oryginałów wersje tekstowe trzeba wygenerować ponownie.
 
+## Baza wiedzy asystenta
+
+`npm run kb:build` czyta wyłącznie z tego katalogu. Oryginały są dostępne w aplikacji pod
+`GET /api/docs/<ścieżka>`, a lista dokumentów (z informacją, czy asystent z nich odpowiada) pod
+`GET /api/assistant/documents`. Do odpowiedzi indeksowane są: oba rozporządzenia, oba poradniki, arkusze B, C
+i pierwszej oceny (z wersji tekstowych) oraz model kompetencji (z wersji tekstowej `model-kompetencji.xlsx`).
+Opis zadania, regulamin, grafika i przykładowe OSP są tylko na liście dokumentów.
+
 ## Czego tu brakuje
 
-Opis zadania wymienia jako bazę wiedzy asystenta także poniższe materiały. Nie było ich w paczce, mają być udostępnione na Discordzie:
+Trzy dokumenty bazy wiedzy nie są jeszcze w repo. Ich fragmenty są w `src/assistant/data/knowledge.data.ts`
+(wygenerowane wcześniej z plików autora asystenta) i `kb:build` je zachowuje, dopóki pliku brak. Po dodaniu pliku
+pod wskazaną ścieżką `kb:build` przetworzy go od nowa:
 
-- ustawa o służbie cywilnej (w zakresie potrzebnym do zadania),
-- materiały ze strony KPRM poza dwoma poradnikami,
-- przygotowany zestaw pytań i odpowiedzi.
+| Dokument | Oczekiwana ścieżka | Do tego czasu |
+|---|---|---|
+| Ustawa o służbie cywilnej (`U`), tekst jednolity | `akty-prawne/ustawa-o-sluzbie-cywilnej.pdf` | link do oficjalnego tekstu w [ISAP](https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20082271505) |
+| Zasady obliczania terminów (`LT`) | `materialy-dodatkowe/zasady-obliczania-terminow.docx` | bez linku, „brak pliku źródłowego” |
+| Zestaw pytań i odpowiedzi (`QA`) | `materialy-dodatkowe/pytania-i-odpowiedzi.md` | bez linku, „brak pliku źródłowego” |
+
+Opis zadania wymienia też materiały ze strony KPRM poza dwoma poradnikami; nie było ich w paczce.

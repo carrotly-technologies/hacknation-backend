@@ -1,32 +1,45 @@
-// One-off ingestion: turns the source documents (acts, regulations, KPRM
-// guides, deadline notes, Q&A set) into a typed TS module with text chunks
-// (src/assistant/data/knowledge.data.ts), so the app needs no runtime reads.
+// One-off ingestion: turns the source documents in docs/ (acts, regulations,
+// KPRM guides, assessment sheets, deadline notes, Q&A set) into a typed TS
+// module with text chunks (src/assistant/data/knowledge.data.ts), so the app
+// needs no runtime reads.
 //
 // Acts are chunked by legal unit (art./§ + ust.), guides by page (split on
-// paragraphs when long), the deadline note by paragraph, Q&A by question.
-// The competency model is not ingested here: the app builds its chunks from
-// src/competency-model/data/model.data.ts.
+// paragraphs when long), sheets by section, the deadline note by paragraph,
+// Q&A by question, the competency model by competency and by indicator.
+//
+// Reads only from docs/ in this repo. The civil service act (U), the deadline
+// note (LT) and the Q&A set (QA) are not in docs/ yet: while a file is missing,
+// the chunks of that document already in knowledge.data.ts are kept as they
+// are. Drop the file at its path below and re-run to re-ingest it.
 //
 // Requires `pdftotext` (poppler) and `unzip` on PATH.
-// Usage: node scripts/build-knowledge-base.mjs [repo-root]
+// Usage: npm run kb:build
 import { execFileSync } from 'node:child_process';
-import { readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 
-const root = resolve(process.argv[2] ?? resolve(import.meta.dirname, '../..'));
+const root = resolve(import.meta.dirname, '../docs');
 const target = resolve(
   import.meta.dirname,
   '../src/assistant/data/knowledge.data.ts',
 );
 
+/** Source file of each document, relative to docs/. */
 const P = {
-  U: 'cyfrowy-asysten-ocen-okresowych/extracted/1. Akty prawne/1. Akty prawne/3. Ustawa o służbie cywilnej - cała.pdf',
-  RO: 'cyfrowy-asysten-ocen-okresowych/extracted/1. Akty prawne/1. Akty prawne/1. Rozporządzenie w sprawie ocen okresowych.pdf',
-  RP: 'kompas-kompetencji/extracted/HackNation/Pierwsza ocena w służbie cywilnej/Rozporządzenie o pierwszej ocenie z 2015 r. (1).pdf',
-  PO: 'cyfrowy-asysten-ocen-okresowych/extracted/6. Materiały dodatkowe/6. Materiały dodatkowe/Poradnik - oceny okresowe w służbie cywilnej.pdf',
-  PP: 'kompas-kompetencji/extracted/HackNation/Pierwsza ocena w służbie cywilnej/Pierwsza ocena w służbie cywilnej - poradnik z 2016 r. (1).pdf',
-  LT: 'cyfrowy-asysten-ocen-okresowych/extracted/6. Materiały dodatkowe/6. Materiały dodatkowe/liczenie terminów.docx',
-  QA: 'notatki/qa-baza-wiedzy.md',
+  U: 'akty-prawne/ustawa-o-sluzbie-cywilnej.pdf',
+  RO: 'ocena-okresowa/rozporzadzenie-oceny-okresowe-2016.pdf',
+  RP: 'pierwsza-ocena/rozporzadzenie-pierwsza-ocena-2015.pdf',
+  PO: 'ocena-okresowa/poradnik-oceny-okresowe.pdf',
+  PP: 'pierwsza-ocena/poradnik-pierwsza-ocena-2016.pdf',
+  LT: 'materialy-dodatkowe/zasady-obliczania-terminow.docx',
+  QA: 'materialy-dodatkowe/pytania-i-odpowiedzi.md',
+  // Sheets: their text versions (docs/tekst/, generated with python-docx),
+  // which keep the table layout that the raw document XML loses.
+  AB: 'tekst/ocena-okresowa/arkusz-oceny-b.txt',
+  AC: 'tekst/ocena-okresowa/arkusz-oceny-c.txt',
+  AP: 'tekst/pierwsza-ocena/arkusz-pierwszej-oceny.txt',
+  // The competency model: the text version of model-kompetencji.xlsx.
+  MK: 'tekst/model-kompetencji/model-kompetencji.txt',
 };
 
 export const DOCS = {
@@ -61,15 +74,38 @@ export const DOCS = {
     title: 'Zestaw pytań i odpowiedzi o ocenach w służbie cywilnej',
     of: 'Zestaw Q&A',
   },
+  AB: {
+    title:
+      'Arkusz B oceny okresowej – wzór (zał. nr 3 do rozporządzenia w sprawie ocen okresowych 2016): stanowiska kierujące pracownikami',
+    of: 'arkusza B oceny okresowej',
+  },
+  AC: {
+    title:
+      'Arkusz C oceny okresowej – wzór (zał. nr 4 do rozporządzenia w sprawie ocen okresowych 2016): pozostałe stanowiska',
+    of: 'arkusza C oceny okresowej',
+  },
+  AP: {
+    title:
+      'Arkusz pierwszej oceny w służbie cywilnej – wzór (zał. nr 2 do rozporządzenia w sprawie pierwszej oceny 2015)',
+    of: 'arkusza pierwszej oceny',
+  },
+  MK: {
+    title: 'Model kompetencji w służbie cywilnej',
+    of: 'Model kompetencji',
+  },
 };
 
-const pdfPages = (rel) =>
+/**
+ * Pages as lines. `tight` drops blank lines, which newer poppler releases put
+ * between the lines of the Dz.U. acts (and inside hyphenated words).
+ */
+const pdfPages = (rel, { tight = false } = {}) =>
   execFileSync('pdftotext', ['-layout', resolve(root, rel), '-'], {
     encoding: 'utf8',
     maxBuffer: 64 * 1024 * 1024,
   })
     .split('\f')
-    .map((page) => page.split('\n'));
+    .map((page) => page.split('\n').filter((l) => !tight || l.trim()));
 
 const NOISE = [
   /©Kancelaria Sejmu/,
@@ -154,7 +190,7 @@ const squash = (text) =>
     // The consolidated act glues these ("niewcześniej niż").
     .replace(/\bnie(wcześniej|później)\b/g, 'nie $1')
     .replace(/\u00ad|\ufeff/g, '')
-    .replace(/(\p{Ll})-\n(\p{Ll})/gu, '$1$2')
+    .replace(/(\p{Ll})-\n\s*(\p{Ll})/gu, '$1$2')
     .replace(/[ \t]+/g, ' ')
     .replace(/ *\n */g, '\n')
     .replace(/\n{3,}/g, '\n\n')
@@ -183,7 +219,7 @@ const TOPICS = {
       'zmiana stanowiska, zmiana zakresu obowiązków, zmiana oceniającego, zmiana przełożonego, ponowne ustalenie kryteriów, termin nie ulega zmianie',
     '§ 10': 'rozmowa oceniająca, kiedy, co omawia się, kierunki rozwoju, IPRZ',
     '§ 11':
-      'sporządzenie oceny na piśmie, oceny cząstkowe, skala ocen 1 3 5 7 9, średnia arytmetyczna, ogólny poziom spełniania kryteriów, przedziały średniej, ocena pozytywna negatywna, uzasadnienie, wnioski IPRZ, wniosek o stopień służbowy',
+      'sporządzenie oceny na piśmie, oceny cząstkowe, skala ocen 1 3 5 7 9, średnia arytmetyczna bez zaokrąglania, ogólny poziom spełniania kryteriów, przedziały średniej, ocena pozytywna negatywna, uzasadnienie, wnioski IPRZ, wniosek o stopień służbowy',
     '§ 12':
       'zapoznanie ocenianego z oceną, podpis, oryginał do akt osobowych, kopia arkusza, odmowa podpisu',
     '§ 13': 'przepisy przejściowe, stare przepisy',
@@ -264,7 +300,9 @@ const push = (doc, ref, text, extra = {}) => {
  * page.
  */
 function ingestAct(doc, { unitRe, unitLabel, pageLabel, marginCol, annexRe }) {
-  const pages = pdfPages(P[doc]);
+  const pages = pdfPages(P[doc], { tight: true });
+  // Annexes are split on blank lines, so they keep them.
+  const loosePages = pdfPages(P[doc]);
   const lines = [];
   let annexFrom = null;
   pages.forEach((page, i) => {
@@ -336,7 +374,7 @@ function ingestAct(doc, { unitRe, unitLabel, pageLabel, marginCol, annexRe }) {
   if (annexFrom !== null) {
     let annex = '';
     for (let i = annexFrom; i < pages.length; i++) {
-      const text = clean(pages[i]).join('\n');
+      const text = clean(loosePages[i]).join('\n');
       const no = /Załącznik nr (\d+)/.exec(text);
       if (no) annex = `zał. nr ${no[1]}`;
       for (const part of splitLong(text, 1800)) {
@@ -481,14 +519,158 @@ function ingestQa() {
   }
 }
 
+// -------------------------------------------------------------- sheets
+
+/** Blank-line blocks of a sheet; a "CZĘŚĆ …" line starts a new section. */
+function ingestSheet(doc) {
+  const text = readFileSync(resolve(root, P[doc]), 'utf8');
+  const blocks = text
+    .split(/\n\s*\n/)
+    .map((b) =>
+      b
+        .split('\n')
+        // Signature and fill-in lines carry no rules.
+        .filter((l) => /\p{L}{3}/u.test(l.replace(/dd\.mm\.rrrr|rrrr/g, '')))
+        .map((l) => l.replace(/(\s*\|\s*)+$/, '').replace(/\|(\s*\|)+/g, '|'))
+        .join('\n')
+        .trim(),
+    )
+    .filter(Boolean);
+  let part = '';
+  let cur = { part: '', text: '' };
+  const flush = () => {
+    if (!cur.text) return;
+    const where = cur.part ? `, ${cur.part.replace('CZĘŚĆ', 'część')}` : '';
+    push(doc, `Wzór ${DOCS[doc].of}${where}`, cur.text, {
+      unit: cur.part || 'nagłówek',
+      section: cur.part || undefined,
+      keywords: `wzór ${DOCS[doc].of}, co wpisać do arkusza, wypełnianie arkusza`,
+    });
+    cur = { part, text: '' };
+  };
+  for (const block of blocks) {
+    const head = /^(CZĘŚĆ [IVX]+|CZĘŚĆ OGÓLNA)\b/m.exec(block);
+    if (head) {
+      const [before, after] = [
+        block.slice(0, head.index).trim(),
+        block.slice(head.index).trim(),
+      ];
+      if (before) cur.text += (cur.text ? '\n\n' : '') + before;
+      flush();
+      part = head[1];
+      cur = { part, text: after };
+      continue;
+    }
+    if (cur.text && cur.text.length + block.length > 1200) flush();
+    cur.text += (cur.text ? '\n\n' : '') + block;
+  }
+  flush();
+}
+
+// ---------------------------------------------------- competency model
+
+const LEVELS = [
+  [1, 'znacznie poniżej oczekiwań'],
+  [3, 'poniżej oczekiwań'],
+  [5, 'na poziomie oczekiwań'],
+  [7, 'powyżej oczekiwań'],
+  [9, 'znacznie powyżej oczekiwań'],
+];
+
+/**
+ * The xlsx text version: a "Model kompetencji" sheet with the instructions,
+ * then one sheet per competency with a row per indicator (name, 5 levels).
+ * Chunks: the instructions and scale, one overview per competency (its
+ * indicators), one per indicator with the descriptions of all 5 levels.
+ */
+function ingestModel() {
+  const sheets = readFileSync(resolve(root, P.MK), 'utf8')
+    .split(/^### SHEET: .*\n/m)
+    .filter((s) => s.trim())
+    .map((s) =>
+      s
+        .trim()
+        .split('\n')
+        .map((row) =>
+          row.split(' | ').map((cell) => cell.replace(/ \/ /g, ' ').trim()),
+        ),
+    );
+  const [intro, ...competencies] = sheets;
+  const instructions = intro
+    .slice(2)
+    .map((row) => row[0])
+    .filter((t) => t && !/^Lp\.$/.test(t) && !/^\d+$/.test(t))
+    .slice(0, 3);
+  const scale = LEVELS.map(([p, l]) => `${p} – ${l}`).join('; ');
+  push(
+    'MK',
+    `${DOCS.MK.of}, instrukcja i skala`,
+    `${instructions.join('\n')}\nSkala ocen: ${scale}.`,
+    { unit: 'instrukcja' },
+  );
+  for (const rows of competencies) {
+    const name = rows[0][0].toLowerCase();
+    const indicators = rows.slice(2).filter((r) => r.length >= 6 && r[0]);
+    const ref = `${DOCS.MK.of}, kryterium „${name}”`;
+    push(
+      'MK',
+      ref,
+      [
+        `Kryterium: ${name}. Wskaźniki:`,
+        ...indicators.map((r) => `- ${r[0]} (na poziomie oczekiwań: ${r[3]})`),
+      ].join('\n'),
+      { unit: name },
+    );
+    indicators.forEach((r, i) => {
+      push(
+        'MK',
+        `${ref}, wskaźnik ${i + 1}`,
+        [
+          `Kryterium: ${name}. Wskaźnik ${i + 1}: ${r[0]}`,
+          ...LEVELS.map(([p, l], n) => `${p} pkt (${l}): ${r[n + 1]}`),
+        ].join('\n'),
+        { unit: name, section: `Wskaźnik ${i + 1}` },
+      );
+    });
+  }
+}
+
+// ------------------------------------------------------------- fallback
+
+/** Chunks of one document in the current knowledge.data.ts. */
+function existingChunks(doc) {
+  if (!existsSync(target)) return [];
+  return readFileSync(target, 'utf8')
+    .split('\n')
+    .filter((l) => l.startsWith('  {'))
+    .map((l) => JSON.parse(l.trim().replace(/,$/, '')))
+    .filter((c) => c.doc === doc);
+}
+
+const kept = [];
+/** Ingests a document from docs/, or keeps its chunks while the file is missing. */
+function ingestOrKeep(doc, ingest) {
+  if (existsSync(resolve(root, P[doc]))) return ingest();
+  const old = existingChunks(doc);
+  if (old.length === 0) {
+    throw new Error(
+      `docs/${P[doc]} is missing and knowledge.data.ts has no ${doc} chunks`,
+    );
+  }
+  chunks.push(...old);
+  kept.push(doc);
+}
+
 // ----------------------------------------------------------------- run
 
-ingestAct('U', {
-  unitRe: /^\s*Art\. (\d+[a-z]*)\.\s/,
-  unitLabel: 'art.',
-  pageLabel: (p) => `s. ${p}/71`,
-  marginCol: 84,
-});
+ingestOrKeep('U', () =>
+  ingestAct('U', {
+    unitRe: /^\s*Art\. (\d+[a-z]*)\.\s/,
+    unitLabel: 'art.',
+    pageLabel: (p) => `s. ${p}/71`,
+    marginCol: 84,
+  }),
+);
 ingestAct('RO', {
   unitRe: /^[a-z\s]{0,8}§ (\d+[a-z]*)\.\s/,
   unitLabel: '§',
@@ -503,9 +685,18 @@ ingestAct('RP', {
 });
 ingestGuide('PO', { skipPages: [1, 2] });
 ingestGuide('PP', { skipPages: [1, 2] });
-ingestDeadlines();
-ingestQa();
+ingestOrKeep('LT', ingestDeadlines);
+ingestOrKeep('QA', ingestQa);
+ingestSheet('AB');
+ingestSheet('AC');
+ingestSheet('AP');
+ingestModel();
 
+if (kept.length) {
+  console.warn(
+    `Kept existing chunks of ${kept.join(', ')}: source file missing in docs/.`,
+  );
+}
 const counts = Object.fromEntries(
   Object.keys(DOCS).map((d) => [d, chunks.filter((c) => c.doc === d).length]),
 );

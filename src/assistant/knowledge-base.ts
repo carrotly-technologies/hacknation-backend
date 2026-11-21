@@ -1,40 +1,8 @@
-import { COMPETENCY_MODEL } from '../competency-model/data/model.data.js';
 import { Bm25Index } from './bm25.js';
 import { KNOWLEDGE_CHUNKS } from './data/knowledge.data.js';
 import type { KnowledgeChunk, KnowledgeDocId } from './knowledge.types.js';
 
 const MAX_PER_UNIT = 2;
-
-export const MODEL_TITLE = 'Model kompetencji w służbie cywilnej';
-
-/** Chunks of the competency model: one per competency, with its indicators. */
-export function competencyModelChunks(): KnowledgeChunk[] {
-  const scale = COMPETENCY_MODEL.scale
-    .map((s) => `${s.points} – ${s.label}`)
-    .join('; ');
-  const intro: KnowledgeChunk = {
-    id: 'MK-0',
-    doc: 'MK',
-    title: MODEL_TITLE,
-    ref: 'Model kompetencji, instrukcja i skala',
-    text: `${COMPETENCY_MODEL.instructions.join('\n')}\nSkala ocen: ${scale}.`,
-  };
-  return [
-    intro,
-    ...COMPETENCY_MODEL.competencies.map((c, i) => ({
-      id: `MK-${i + 1}`,
-      doc: 'MK' as const,
-      title: MODEL_TITLE,
-      ref: `Model kompetencji, kryterium „${c.name.toLowerCase()}”`,
-      text: [
-        `Kryterium: ${c.name.toLowerCase()}. Wskaźniki:`,
-        ...c.indicators.map(
-          (ind) => `- ${ind.name} (na poziomie oczekiwań: ${ind.levels[5]})`,
-        ),
-      ].join('\n'),
-    })),
-  ];
-}
 
 export interface SearchHit {
   chunk: KnowledgeChunk;
@@ -51,13 +19,19 @@ export interface SearchOptions {
 }
 
 const OFF_TOPIC_PRIOR = 0.75;
+const INDICATOR_PRIOR = 0.5;
 
 /**
  * Most of the civil service act is not about assessments; its articles without
- * an assessment topic label are ranked slightly lower.
+ * an assessment topic label are ranked slightly lower. So are the level
+ * descriptions of single indicators of the competency model, so that they do
+ * not crowd out the rules (or the competency overview) for general questions.
  */
-const prior = (c: KnowledgeChunk): number =>
-  c.doc === 'U' && !c.keywords ? OFF_TOPIC_PRIOR : 1;
+const prior = (c: KnowledgeChunk): number => {
+  if (c.doc === 'U' && !c.keywords) return OFF_TOPIC_PRIOR;
+  if (c.doc === 'MK' && c.section) return INDICATOR_PRIOR;
+  return 1;
+};
 
 /** What gets indexed for a chunk: its text plus where it sits. */
 const indexText = (c: KnowledgeChunk): string =>
@@ -70,12 +44,7 @@ export class KnowledgeBase {
   private readonly qaChunks: KnowledgeChunk[];
   private readonly qaIndex: Bm25Index;
 
-  constructor(
-    chunks: KnowledgeChunk[] = [
-      ...KNOWLEDGE_CHUNKS,
-      ...competencyModelChunks(),
-    ],
-  ) {
+  constructor(chunks: KnowledgeChunk[] = KNOWLEDGE_CHUNKS) {
     this.chunks = chunks;
     this.index = new Bm25Index(chunks.map(indexText));
     this.qaChunks = chunks.filter((c) => c.qa);

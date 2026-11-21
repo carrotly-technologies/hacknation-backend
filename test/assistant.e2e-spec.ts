@@ -34,11 +34,13 @@ describe('Assistant (e2e, no LLM configured)', () => {
     }).expect(200);
     expect(res.body).toMatchObject({ grounded: true, mode: 'EXTRACTIVE' });
     expect(res.body.answer).toContain('21 dni');
-    expect(res.body.sources[0]).toEqual({
+    const [first] = res.body.sources;
+    expect(first).toEqual({
       n: 1,
       title: expect.any(String),
       ref: expect.any(String),
       quote: expect.any(String),
+      url: first.url === null ? null : expect.any(String),
     });
     expect(res.body.disclaimer).toMatch(/decyzja należy do oceniającego/);
   });
