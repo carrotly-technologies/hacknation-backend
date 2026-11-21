@@ -57,6 +57,7 @@ export function caseRecord(base: Required_ & Partial<CaseRecord>): CaseRecord {
     previousAssessment: null,
     promotionRequest: emptyPromotionRequest(base.person.employment),
     firstConditions: null,
+    assessmentTalkOn: null,
     signedByEvaluatorOn: null,
     sentForAckOn: null,
     acknowledgedOn: null,

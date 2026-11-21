@@ -134,10 +134,9 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       'komunikacja.2': null,
     });
 
-    // signing too early: 409 with the failing checks
+    // signing too early: 409, the assessment talk comes first
     res = await act('c-001', 'SIGN_ASSESSMENT').expect(409);
-    expect(res.body.message).toContain('kontrola formalna');
-    expect(res.body.formalCheck.length).toBeGreaterThan(0);
+    expect(res.body.message).toContain('Najpierw odnotuj rozmowę oceniającą');
 
     res = await http()
       .patch('/api/cases/c-001')
@@ -156,9 +155,39 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
         promotionRequest: { attached: 'NO' },
       })
       .expect(200);
+    res = await act('c-001', 'SIGN_ASSESSMENT').expect(409);
+    expect(res.body.message).toContain('Najpierw odnotuj rozmowę oceniającą');
+    expect(res.body.availableActions).toBeUndefined();
+
+    res = await http()
+      .post('/api/cases/c-001/actions')
+      .send({ action: 'RECORD_ASSESSMENT_TALK', date: '2026-11-22' })
+      .expect(400);
+    expect(JSON.stringify(res.body.message)).toContain('z przyszłości');
+    res = await http()
+      .post('/api/cases/c-001/actions')
+      .send({ action: 'RECORD_ASSESSMENT_TALK', date: '2020-01-01' })
+      .expect(400);
+    expect(JSON.stringify(res.body.message)).toContain('części I');
+    res = await http()
+      .post('/api/cases/c-001/actions')
+      .send({ action: 'RECORD_ASSESSMENT_TALK', date: '2026-11-20' })
+      .expect(200);
+    expect(res.body).toMatchObject({
+      assessmentTalkOn: '2026-11-20',
+      availableActions: ['RECORD_ASSESSMENT_TALK', 'SIGN_ASSESSMENT'],
+    });
+    expect(res.body.history.at(-1).text).toBe(
+      'Odnotowano rozmowę oceniającą 20.11.2026.',
+    );
+    expect(
+      res.body.stages.find((s: { id: string }) => s.id === 'JUSTIFICATION'),
+    ).toMatchObject({ name: 'Weryfikacja formularza – rozmowa oceniająca' });
+
     res = await act('c-001', 'SIGN_ASSESSMENT').expect(200);
     expect(res.body).toMatchObject({
       currentStage: 'DOCUMENT',
+      assessmentTalkOn: '2026-11-20',
       signedByEvaluatorOn: '2026-11-21',
     });
 
@@ -297,6 +326,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
         .expect(400);
       expect(JSON.stringify(res.body.message)).toContain('4000');
 
+      await act('c-001', 'RECORD_ASSESSMENT_TALK').expect(200);
       await act('c-001', 'SIGN_ASSESSMENT').expect(200);
       res = await http()
         .patch('/api/cases/c-001')

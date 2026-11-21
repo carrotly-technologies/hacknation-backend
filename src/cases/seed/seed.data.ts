@@ -581,6 +581,7 @@ function objectionPeriodCase(r: Rel): CaseRecord {
     justification:
       'Oceniana przez cały okres przygotowywała opinie do projektów aktów prawnych terminowo i bez błędów merytorycznych. Wyróżnia ją łączenie wiedzy z kilku dziedzin prawa i proponowanie nowych rozwiązań (m.in. lista kontrolna oceny skutków regulacji). Organizacja pracy i komunikacja na poziomie oczekiwań.',
     iprz: 'Szkolenie z prowadzenia spotkań konsultacyjnych (I półrocze); udział w zespole ds. wdrożenia aktu w sprawie AI jako ekspert; mentoring nowej osoby w wydziale.',
+    assessmentTalkOn: r.days(-7),
     signedByEvaluatorOn: signed,
     sentForAckOn: signed,
     acknowledgedOn: acknowledged,
@@ -649,6 +650,7 @@ function otherUnitCases(r: Rel): CaseRecord[] {
         komunikacja: 5,
       },
       iprz: 'Szkolenie z kontroli rozliczeń dotacji; samodzielne prowadzenie rozliczeń w nowym systemie finansowym.',
+      assessmentTalkOn: r.days(-4),
       signedByEvaluatorOn: signed,
       sentForAckOn: signed,
       history: [

@@ -201,6 +201,8 @@ export interface CaseDetail extends CaseSummary {
   firstConditions: FirstConditions | null;
   evaluation: EvaluateResult | null;
   formalCheck: FormalCheckItem[];
+  /** Date of the assessment talk (§10 rozp. 2016), recorded before signing. */
+  assessmentTalkOn: string | null;
   signedByEvaluatorOn: string | null;
   acknowledgedOn: string | null;
   objectionDeadline: Deadline | null;
@@ -248,6 +250,7 @@ export interface CaseRecord {
   previousAssessment: PreviousAssessment | null;
   promotionRequest: PromotionRequest;
   firstConditions: FirstConditions | null;
+  assessmentTalkOn: string | null;
   signedByEvaluatorOn: string | null;
   sentForAckOn: string | null;
   acknowledgedOn: string | null;
@@ -261,11 +264,18 @@ export type CaseAction =
   | 'CONFIRM_PART_I'
   | 'EMPLOYEE_ACK_PART_I'
   | 'START_ASSESSMENT'
+  | 'RECORD_ASSESSMENT_TALK'
   | 'SIGN_ASSESSMENT'
   | 'SEND_FOR_ACK'
   | 'EMPLOYEE_ACK_ASSESSMENT'
   | 'REPORT_SUBMITTED'
   | 'COMPLETE_INTRO_TALK';
+
+/** Optional body of POST /cases/:id/actions besides `action`. */
+export interface ActionParams {
+  /** RECORD_ASSESSMENT_TALK: date of the talk (YYYY-MM-DD), today if absent. */
+  date?: string;
+}
 
 export const CASE_ACTIONS: readonly CaseAction[] = [
   'ACCEPT_OSP_ANALYSIS',
@@ -273,6 +283,7 @@ export const CASE_ACTIONS: readonly CaseAction[] = [
   'CONFIRM_PART_I',
   'EMPLOYEE_ACK_PART_I',
   'START_ASSESSMENT',
+  'RECORD_ASSESSMENT_TALK',
   'SIGN_ASSESSMENT',
   'SEND_FOR_ACK',
   'EMPLOYEE_ACK_ASSESSMENT',

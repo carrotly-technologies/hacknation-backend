@@ -4,8 +4,9 @@ import {
   availableActions,
 } from './actions.rules.js';
 import { effectiveStage, STAGE_NAMES } from './case.rules.js';
-import { CaseRuleError } from './case-rule.error.js';
+import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
 import type { CaseAction, CaseRecord } from './case.types.js';
+import { addDays } from './dates.js';
 import { applyPatch } from './patch.rules.js';
 import { buildSeed } from './seed/seed.data.js';
 import { buildStages, caseStatus, nextDeadline } from './stages.rules.js';
@@ -77,7 +78,8 @@ describe('periodic state machine', () => {
     r = decideAll(r);
     expect(effectiveStage(r)).toBe('JUSTIFICATION');
     r = applyPatch(r, { iprz: 'Szkolenie z analizy ryzyka.' }, TODAY);
-    r = run(r, 'SIGN_ASSESSMENT');
+    expect(availableActions(r, TODAY)).toEqual(['RECORD_ASSESSMENT_TALK']);
+    r = run(r, 'RECORD_ASSESSMENT_TALK', 'SIGN_ASSESSMENT');
     expect(effectiveStage(r)).toBe('DOCUMENT');
     expect(r.signedByEvaluatorOn).toBe(TODAY);
 
@@ -107,7 +109,13 @@ describe('periodic state machine', () => {
       },
       TODAY,
     );
-    r = run(r, 'SIGN_ASSESSMENT', 'SEND_FOR_ACK', 'EMPLOYEE_ACK_ASSESSMENT');
+    r = run(
+      r,
+      'RECORD_ASSESSMENT_TALK',
+      'SIGN_ASSESSMENT',
+      'SEND_FOR_ACK',
+      'EMPLOYEE_ACK_ASSESSMENT',
+    );
     const text = r.history.at(-1)!.text;
     expect(text).toContain('§7 pkt 2');
     expect(text).toContain('art. 81 ust. 9');
@@ -164,7 +172,11 @@ describe('illegal transitions', () => {
 
   it('SIGN_ASSESSMENT is refused with the failing formal checks', () => {
     const error = conflict(() =>
-      applyAction(seed('c-001'), 'SIGN_ASSESSMENT', TODAY),
+      applyAction(
+        { ...seed('c-001'), assessmentTalkOn: TODAY },
+        'SIGN_ASSESSMENT',
+        TODAY,
+      ),
     );
     expect(error.formalCheck?.map((f) => f.id)).toEqual([
       'ALL_CRITERIA_DECIDED',
@@ -283,6 +295,7 @@ describe('patch locks and validation', () => {
         { iprz: 'Szkolenie.', promotionRequest: { attached: 'NO' } },
         TODAY,
       ),
+      'RECORD_ASSESSMENT_TALK',
       'SIGN_ASSESSMENT',
     );
     for (const patch of [
@@ -346,5 +359,92 @@ describe('step 4 is the assessment form, not a talk screen', () => {
     );
     expect(error.message).toContain('formularzu pierwszej oceny');
     expect(error.message).not.toContain('rozmowy oceniającej');
+  });
+});
+
+describe('step „Weryfikacja formularza” is the assessment talk', () => {
+  const decided = () =>
+    applyPatch(
+      decideAll(seed('c-001')),
+      { iprz: 'Szkolenie.', promotionRequest: { attached: 'NO' } },
+      TODAY,
+    );
+
+  it('names the step after the talk', () => {
+    expect(STAGE_NAMES.JUSTIFICATION).toBe(
+      'Weryfikacja formularza – rozmowa oceniająca',
+    );
+    expect(ACTION_LABELS.RECORD_ASSESSMENT_TALK).toBe(
+      'Rozmowa oceniająca przeprowadzona',
+    );
+  });
+
+  it('signing needs the talk first (§10)', () => {
+    const r = decided();
+    expect(availableActions(r, TODAY)).not.toContain('SIGN_ASSESSMENT');
+    const error = conflict(() => run(r, 'SIGN_ASSESSMENT'));
+    expect(error.message).toContain(
+      'Najpierw odnotuj rozmowę oceniającą (§10 rozp. PRM z 4.04.2016).',
+    );
+    expect(error.formalCheck).toBeUndefined();
+  });
+
+  it('records the talk today by default, logs it and can change the date before signing', () => {
+    let r = run(decided(), 'RECORD_ASSESSMENT_TALK');
+    expect(r.assessmentTalkOn).toBe(TODAY);
+    expect(r.history.at(-1)!.text).toBe(
+      'Odnotowano rozmowę oceniającą 21.11.2026.',
+    );
+    expect(availableActions(r, TODAY)).toEqual([
+      'RECORD_ASSESSMENT_TALK',
+      'SIGN_ASSESSMENT',
+    ]);
+    r = applyAction(r, 'RECORD_ASSESSMENT_TALK', TODAY, {
+      date: '2026-11-19',
+    });
+    expect(r.assessmentTalkOn).toBe('2026-11-19');
+    // corrections after the talk are still saved until signing
+    r = applyPatch(r, { decisions: { komunikacja: 7 } }, TODAY);
+    expect(r.decisions.komunikacja).toBe(7);
+    r = run(r, 'SIGN_ASSESSMENT');
+    expect(r.assessmentTalkOn).toBe('2026-11-19');
+    expect(conflict(() => run(r, 'RECORD_ASSESSMENT_TALK')).message).toContain(
+      'tylko przed podpisem',
+    );
+  });
+
+  it('rejects a date in the future or before part I was acknowledged', () => {
+    const r = decided();
+    expect(() =>
+      applyAction(r, 'RECORD_ASSESSMENT_TALK', TODAY, { date: '2026-11-22' }),
+    ).toThrow(CaseValidationError);
+    expect(() =>
+      applyAction(r, 'RECORD_ASSESSMENT_TALK', TODAY, { date: '2026-11-22' }),
+    ).toThrow('nie może być z przyszłości');
+    const ack = r.partI.acknowledgedByEmployeeOn!;
+    expect(() =>
+      applyAction(r, 'RECORD_ASSESSMENT_TALK', TODAY, {
+        date: addDays(ack, -1),
+      }),
+    ).toThrow('potwierdzenie części I');
+    expect(
+      applyAction(r, 'RECORD_ASSESSMENT_TALK', TODAY, { date: ack })
+        .assessmentTalkOn,
+    ).toBe(ack);
+  });
+
+  it('is refused before every criterion is decided and on the first assessment', () => {
+    expect(
+      conflict(() => run(seed('c-001'), 'RECORD_ASSESSMENT_TALK')).message,
+    ).toContain('po ocenie wszystkich kryteriów');
+    expect(
+      conflict(() => run(seed('c-004'), 'RECORD_ASSESSMENT_TALK')).message,
+    ).toContain('tylko oceny okresowej');
+  });
+
+  it('signed demo cases carry the talk date', () => {
+    for (const c of buildSeed(TODAY).filter((c) => c.stage === 'DOCUMENT')) {
+      expect(c.assessmentTalkOn).toBe(c.completedOn.ASSESSMENT);
+    }
   });
 });

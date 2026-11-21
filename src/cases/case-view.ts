@@ -59,6 +59,7 @@ export function toDetail(
     firstConditions: record.firstConditions,
     evaluation: computeEvaluation(record, today),
     formalCheck: formalCheck(record, today),
+    assessmentTalkOn: record.assessmentTalkOn,
     signedByEvaluatorOn: record.signedByEvaluatorOn,
     acknowledgedOn: record.acknowledgedOn,
     objectionDeadline: objectionDeadlineOf(record, today),

@@ -2,8 +2,9 @@ import { RO_2016, RP_2015 } from '../assessments/assessment.format.js';
 import { analyseOsp } from '../osp/osp-analysis.rules.js';
 import { findOsp } from '../osp/osp.data.js';
 import { effectiveStage, STAGE_NAMES } from './case.rules.js';
-import { CaseRuleError } from './case-rule.error.js';
+import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
 import {
+  type ActionParams,
   CASE_ACTIONS,
   type CaseAction,
   type CaseRecord,
@@ -27,6 +28,7 @@ export const ACTION_LABELS: Record<CaseAction, string> = {
   CONFIRM_PART_I: 'Zatwierdź część I',
   EMPLOYEE_ACK_PART_I: 'Oceniany potwierdził zapoznanie z częścią I',
   START_ASSESSMENT: 'Przejdź do formularza oceny kompetencji',
+  RECORD_ASSESSMENT_TALK: 'Rozmowa oceniająca przeprowadzona',
   SIGN_ASSESSMENT: 'Zatwierdź ocenę (podpis oceniającego)',
   SEND_FOR_ACK: 'Przekaż do zapoznania',
   EMPLOYEE_ACK_ASSESSMENT: 'Oceniany zapoznał się z oceną',
@@ -47,7 +49,16 @@ const PERIODIC_ONLY: readonly CaseAction[] = [
   'ACCEPT_SHEET',
   'CONFIRM_PART_I',
   'EMPLOYEE_ACK_PART_I',
+  'RECORD_ASSESSMENT_TALK',
 ];
+
+/**
+ * Signing needs the assessment talk first: „Przed sporządzeniem oceny na
+ * piśmie oceniający przeprowadza z ocenianym rozmowę oceniającą” (§10 rozp.
+ * PRM z 4.04.2016, Dz.U. 2016 poz. 470). Periodic path only; the first
+ * assessment keeps its own flow (rozp. PRM z 23.07.2015).
+ */
+export const TALK_REQUIRED_MESSAGE = `Najpierw odnotuj rozmowę oceniającą (§10 ${RO_2016}).`;
 const FIRST_ONLY: readonly CaseAction[] = [
   'REPORT_SUBMITTED',
   'COMPLETE_INTRO_TALK',
@@ -134,8 +145,18 @@ export function actionBlocker(
       return stage === 'INTRO_TALK'
         ? `Najpierw przeprowadź rozmowę wstępną i wyznacz termin sprawozdania (§3–§4 ${RP_2015}).`
         : `Formularz pierwszej oceny jest już otwarty; sprawa jest na ${here}.`;
+    case 'RECORD_ASSESSMENT_TALK':
+      if (stage === 'JUSTIFICATION') return null;
+      if (stage === 'DOCUMENT') {
+        return `Ocena została już podpisana${record.signedByEvaluatorOn ? ` ${formatDatePl(record.signedByEvaluatorOn)}` : ''}; datę rozmowy oceniającej można zmienić tylko przed podpisem.`;
+      }
+      return `Rozmowę oceniającą odnotowuje się w kroku „${STAGE_NAMES.JUSTIFICATION}”, po ocenie wszystkich kryteriów w formularzu oceny kompetencji; sprawa jest na ${here}.`;
     case 'SIGN_ASSESSMENT':
-      if (PART_II_STAGES.includes(stage)) return null;
+      if (PART_II_STAGES.includes(stage)) {
+        return record.path === 'PERIODIC' && !record.assessmentTalkOn
+          ? TALK_REQUIRED_MESSAGE
+          : null;
+      }
       return DOCUMENT_STAGES.includes(stage)
         ? `Ocena została już zatwierdzona przez oceniającego ${formatDatePl(record.signedByEvaluatorOn!)}.`
         : `Ocenę można zatwierdzić dopiero w otwartym formularzu oceny kompetencji, po ocenie wszystkich kryteriów; sprawa jest na ${here}.`;
@@ -183,6 +204,7 @@ export function applyAction(
   record: CaseRecord,
   action: CaseAction,
   today: string,
+  params: ActionParams = {},
 ): CaseRecord {
   const blocker = actionBlocker(record, action, today);
   if (blocker) {
@@ -251,6 +273,12 @@ export function applyAction(
         );
       }
       break;
+    case 'RECORD_ASSESSMENT_TALK': {
+      const date = assessmentTalkDate(record, today, params.date);
+      next.assessmentTalkOn = date;
+      log(`Odnotowano rozmowę oceniającą ${formatDatePl(date)}.`);
+      break;
+    }
     case 'SIGN_ASSESSMENT': {
       const errors = formalCheck(record, today).filter((item) => !item.ok);
       if (errors.length > 0) {
@@ -337,4 +365,29 @@ export function applyAction(
     }
   }
   return next;
+}
+
+/**
+ * Date of the assessment talk: today when not given; never in the future and
+ * never before the employee acknowledged part I (the assessment period starts
+ * then, §5 ust. 3 rozp. PRM z 4.04.2016).
+ */
+export function assessmentTalkDate(
+  record: CaseRecord,
+  today: string,
+  date: string | undefined,
+): string {
+  const talk = date ?? today;
+  if (talk > today) {
+    throw new CaseValidationError([
+      `Data rozmowy oceniającej (${formatDatePl(talk)}) nie może być z przyszłości; dziś jest ${formatDatePl(today)}.`,
+    ]);
+  }
+  const ack = record.partI.acknowledgedByEmployeeOn;
+  if (ack && talk < ack) {
+    throw new CaseValidationError([
+      `Data rozmowy oceniającej (${formatDatePl(talk)}) nie może być wcześniejsza niż potwierdzenie części I przez ocenianego (${formatDatePl(ack)}).`,
+    ]);
+  }
+  return talk;
 }

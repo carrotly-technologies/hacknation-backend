@@ -129,7 +129,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/cases/:id`             | `CaseDetail`: stages, deadlines, OSP + analysis, part I, observations, ratings, check    |
 | `PATCH /api/cases/:id`           | Partial update; 400 for invalid values, 409 for parts locked at the current stage       |
 | `POST /api/cases/:id/observations` | Adds an S-D-R observation (201)                                                        |
-| `POST /api/cases/:id/actions`    | State machine (`{ action }`); 409 with a Polish explanation for an illegal transition   |
+| `POST /api/cases/:id/actions`    | State machine (`{ action, date? }`; `date` only for `RECORD_ASSESSMENT_TALK`, today by default, 400 if in the future or before part I was acknowledged); 409 with a Polish explanation for an illegal transition; `SIGN_ASSESSMENT` (periodic) needs `assessmentTalkOn` |
 | `GET /api/osp`                   | The 3 real OSP documents from the materials (`src/osp/osp.data.ts`)                     |
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |

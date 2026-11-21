@@ -112,7 +112,7 @@ export const STAGE_NAMES: Record<StageId, string> = {
   OPENING_TALK: 'Rozmowa rozpoczynająca · część I',
   OBSERVATION: 'Okres oceny · obserwacje',
   ASSESSMENT: 'Formularz oceny kompetencji',
-  JUSTIFICATION: 'Uzasadnienie i plan rozwoju (IPRZ)',
+  JUSTIFICATION: 'Weryfikacja formularza – rozmowa oceniająca',
   DOCUMENT: 'Dokument i zapoznanie',
   INTRO_TALK: 'Rozmowa wstępna',
   REPORT: 'Sprawozdanie pracownika',

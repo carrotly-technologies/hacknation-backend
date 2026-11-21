@@ -13,6 +13,7 @@ import { fullName } from './case.rules.js';
 import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
 import { CaseStore } from './case-store.service.js';
 import type {
+  ActionParams,
   CaseAction,
   CaseDetail,
   CaseRecord,
@@ -40,7 +41,7 @@ const TODO_TEXT: Partial<Record<StageId, string>> = {
   OPENING_TALK: 'przeprowadź rozmowę rozpoczynającą (część I)',
   OBSERVATION: 'przejdź do formularza oceny kompetencji',
   ASSESSMENT: 'wypełnij formularz oceny kompetencji',
-  JUSTIFICATION: 'uzupełnij uzasadnienie i IPRZ, zatwierdź ocenę',
+  JUSTIFICATION: 'przeprowadź rozmowę oceniającą, popraw formularz i podpisz ocenę',
   INTRO_TALK: 'przeprowadź rozmowę wstępną i wyznacz termin sprawozdania',
   REPORT: 'odbierz sprawozdanie pracownika',
   FIRST_ASSESSMENT: 'wypełnij formularz pierwszej oceny',
@@ -147,10 +148,16 @@ export class CasesService {
     return this.detail(id);
   }
 
-  async action(id: string, action: CaseAction): Promise<CaseDetail> {
+  async action(
+    id: string,
+    action: CaseAction,
+    params: ActionParams = {},
+  ): Promise<CaseDetail> {
     const record = this.record(id);
     await this.authorize('edit', record);
-    this.store.save(this.run(() => applyAction(record, action, this.today)));
+    this.store.save(
+      this.run(() => applyAction(record, action, this.today, params)),
+    );
     return this.detail(id);
   }
 
