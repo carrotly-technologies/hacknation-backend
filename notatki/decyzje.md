@@ -14,3 +14,15 @@ Decyzje dotyczące interpretacji przepisów i dokumentów z `docs/`, podjęte w 
 - **Skutek uboczny:** gdy przed zatwierdzeniem części I zmieni się arkusz albo kryteria dodatkowe, robocze oceny kryteriów, które wypadły z oceny, są usuwane.
 - **Kod:** `partIIEditable` w `src/cases/patch.rules.ts`.
 - **Status:** do potwierdzenia z ekspertem.
+
+## 2026-11-21: Rozmowa oceniająca i weryfikacja formularza jako osobne kroki
+
+- **Decyzja:** po formularzu oceny kompetencji (`ASSESSMENT`, krok 4) są dwa osobne etapy: `ASSESSMENT_TALK` „Rozmowa oceniająca” (krok 5) i `JUSTIFICATION` „Weryfikacja formularza” (krok 6). Sprawa przechodzi na krok 5, gdy wszystkie kryteria mają ocenę cząstkową; akcja `RECORD_ASSESSMENT_TALK` zapisuje datę rozmowy (`assessmentTalkOn`, domyślnie dziś, nie z przyszłości, nie wcześniej niż zapoznanie z częścią I) i przenosi na krok 6. Podpis (`SIGN_ASSESSMENT`) jest możliwy tylko na kroku 6, po odnotowanej rozmowie.
+- **Źródło:**
+  - Poradnik „Oceny okresowe w służbie cywilnej”, s. 20, Tabela nr 1: etap III „Rozmowa oceniająca” („przed sporządzeniem oceny na piśmie”) i etap IV „Sporządzenie oceny na piśmie (wypełnienie arkusza oceny okresowej)”.
+  - § 10 rozp. PRM z 4.04.2016 (Dz.U. 2016 poz. 470): tematy rozmowy (pkt 1–3); § 11 ust. 2: „Sporządzając ocenę na piśmie, oceniający bierze pod uwagę wnioski z rozmowy oceniającej.”
+- **Podstawa prawna etapów:** `ASSESSMENT` → § 11 ust. 1 pkt 1–4 (wcześniej razem z § 10), `ASSESSMENT_TALK` → § 10, `JUSTIFICATION` → § 11 i art. 108 ustawy. § 12 (zapoznanie) zostaje przy `DOCUMENT` („Ocena końcowa”), bo dotyczy oceny już sporządzonej.
+- **Wcześniej:** po ocenie wszystkich kryteriów sprawa przechodziła od razu do `JUSTIFICATION` („Uzasadnienie i plan rozwoju (IPRZ)”), a data rozmowy nie była zapisywana.
+- **Pierwsza ocena bez zmian** (osobny task).
+- **Kod:** `src/cases/assessment-talk.rules.ts`, `effectiveStage` w `src/cases/case.rules.ts`, `actionBlocker` / `applyAction` w `src/cases/actions.rules.ts`.
+- **Status:** do potwierdzenia z ekspertem.

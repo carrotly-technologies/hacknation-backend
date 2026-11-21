@@ -129,7 +129,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/cases/:id`             | `CaseDetail`: stages, deadlines, OSP + analysis, part I, observations, ratings, check    |
 | `PATCH /api/cases/:id`           | Partial update; 400 for invalid values, 409 for parts locked at the current stage       |
 | `POST /api/cases/:id/observations` | Adds an S-D-R observation (201)                                                        |
-| `POST /api/cases/:id/actions`    | State machine (`{ action }`); 409 with a Polish explanation for an illegal transition   |
+| `POST /api/cases/:id/actions`    | State machine (`{ action, date? }`; `date` only for `RECORD_ASSESSMENT_TALK`); 409 with a Polish explanation for an illegal transition, 400 for an invalid date |
 | `GET /api/osp`                   | The 3 real OSP documents from the materials (`src/osp/osp.data.ts`)                     |
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
@@ -165,6 +165,14 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 - Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` („Wstępny formularz”: the evaluator reviews the proposed sheet and
   criteria, may change them with PATCH, then `ACCEPT_SHEET`) → `OPENING_TALK` → … `ACCEPT_OSP_ANALYSIS` now moves the
   case to `SHEET_PROPOSAL`; cases already past it report its `completedOn` as the OSP analysis date.
+- After `ASSESSMENT` („Formularz oceny kompetencji”, the sheet filled as a draft) come the stages III and IV of the
+  Poradnik (Tabela nr 1): `ASSESSMENT_TALK` („Rozmowa oceniająca”, §10 rozp. 2016) once every criterion has a partial
+  score, then `JUSTIFICATION` („Weryfikacja formularza”, §11: corrections after the talk, justification, IPRZ, formal
+  check, signature) → `DOCUMENT`. `RECORD_ASSESSMENT_TALK` (`{ action, date? }`, today by default; 400 for a date in
+  the future or before the employee acknowledged part I) sets `CaseDetail.assessmentTalkOn`. `SIGN_ASSESSMENT` is
+  allowed only at `JUSTIFICATION`, after the talk (formal check item `ASSESSMENT_TALK_HELD`).
+  `CaseDetail.assessmentTalkTopics` lists the §10 topics (`src/cases/assessment-talk.rules.ts`; empty for the first
+  assessment). Part II stays editable until the signature.
 
 The competency data in `src/competency-model/data/model.data.ts` is generated from `notatki/model-kompetencji.json`
 by `node scripts/generate-model-data.mjs` (then run prettier on it). Don't edit it by hand.

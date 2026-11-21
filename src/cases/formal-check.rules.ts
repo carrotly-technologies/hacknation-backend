@@ -11,6 +11,7 @@ import {
   sheetOf,
 } from './case.rules.js';
 import type { CaseRecord, FormalCheckItem } from './case.types.js';
+import { ASSESSMENT_TALK_LEGAL_BASIS } from './assessment-talk.rules.js';
 import { formatDatePl } from './dates.js';
 import { firstAssessmentWindow, USC } from './deadlines.rules.js';
 import { promotionRequestCheck } from './promotion.rules.js';
@@ -125,6 +126,16 @@ export function formalCheck(
           : `Kryteria dodatkowe w części II są te same co w części I: ${quoted(additional)}.`
         : `Niezgodność kryteriów części I i II: ${problems.join('; ')}.`,
       legalBasis: `§2 ust. 2, §5 ust. 2 ${RO_2016}`,
+    });
+
+    const talk = record.assessmentTalkOn;
+    items.push({
+      id: 'ASSESSMENT_TALK_HELD',
+      ok: talk !== null,
+      message: talk
+        ? `Rozmowa oceniająca przeprowadzona ${formatDatePl(talk)}.`
+        : 'Najpierw przeprowadź i odnotuj rozmowę oceniającą: odbywa się ona przed sporządzeniem oceny na piśmie.',
+      legalBasis: `${ASSESSMENT_TALK_LEGAL_BASIS}; §11 ust. 2 ${RO_2016}`,
     });
   }
 

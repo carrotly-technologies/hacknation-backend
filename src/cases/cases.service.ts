@@ -8,7 +8,7 @@ import { AuthenticationContext } from '@nestjs/authentication';
 import { AuthorizationService } from '@nestjs/authorization';
 import { CasePolicy } from '../auth/case.policy.js';
 import type { User } from '../auth/user.types.js';
-import { applyAction } from './actions.rules.js';
+import { type ActionInput, applyAction } from './actions.rules.js';
 import { fullName } from './case.rules.js';
 import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
 import { CaseStore } from './case-store.service.js';
@@ -40,7 +40,9 @@ const TODO_TEXT: Partial<Record<StageId, string>> = {
   OPENING_TALK: 'przeprowadź rozmowę rozpoczynającą (część I)',
   OBSERVATION: 'przejdź do formularza oceny kompetencji',
   ASSESSMENT: 'wypełnij formularz oceny kompetencji',
-  JUSTIFICATION: 'uzupełnij uzasadnienie i IPRZ, zatwierdź ocenę',
+  ASSESSMENT_TALK: 'przeprowadź rozmowę oceniającą i odnotuj jej datę',
+  JUSTIFICATION:
+    'zweryfikuj formularz po rozmowie oceniającej, uzupełnij IPRZ i podpisz ocenę',
   INTRO_TALK: 'przeprowadź rozmowę wstępną i wyznacz termin sprawozdania',
   REPORT: 'odbierz sprawozdanie pracownika',
   FIRST_ASSESSMENT: 'wypełnij formularz pierwszej oceny',
@@ -149,10 +151,16 @@ export class CasesService {
     return this.detail(id, true);
   }
 
-  async action(id: string, action: CaseAction): Promise<CaseDetail> {
+  async action(
+    id: string,
+    action: CaseAction,
+    input: ActionInput = {},
+  ): Promise<CaseDetail> {
     const record = this.record(id);
     await this.authorize('edit', record);
-    this.store.save(this.run(() => applyAction(record, action, this.today)));
+    this.store.save(
+      this.run(() => applyAction(record, action, this.today, input)),
+    );
     return this.detail(id, true);
   }
 

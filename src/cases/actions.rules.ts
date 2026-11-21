@@ -6,8 +6,12 @@ import {
   ackTokenExpiresOn,
   newAckToken,
 } from './ack-link.rules.js';
+import {
+  ASSESSMENT_TALK_LEGAL_BASIS,
+  assessmentTalkDateErrors,
+} from './assessment-talk.rules.js';
 import { effectiveStage, STAGE_NAMES } from './case.rules.js';
-import { CaseRuleError } from './case-rule.error.js';
+import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
 import {
   CASE_ACTIONS,
   type CaseAction,
@@ -32,6 +36,7 @@ export const ACTION_LABELS: Record<CaseAction, string> = {
   CONFIRM_PART_I: 'Zatwierdź część I',
   EMPLOYEE_ACK_PART_I: 'Oceniany potwierdził zapoznanie z częścią I',
   START_ASSESSMENT: 'Przejdź do formularza oceny kompetencji',
+  RECORD_ASSESSMENT_TALK: 'Rozmowa oceniająca przeprowadzona',
   SIGN_ASSESSMENT: 'Zatwierdź ocenę (podpis oceniającego)',
   SEND_FOR_ACK: 'Przekaż do zapoznania',
   EMPLOYEE_ACK_ASSESSMENT: 'Oceniany zapoznał się z oceną',
@@ -41,6 +46,7 @@ export const ACTION_LABELS: Record<CaseAction, string> = {
 
 const PART_II_STAGES: readonly StageId[] = [
   'ASSESSMENT',
+  'ASSESSMENT_TALK',
   'JUSTIFICATION',
   'FIRST_ASSESSMENT',
   'FIRST_CONDITIONS',
@@ -52,6 +58,8 @@ const PERIODIC_ONLY: readonly CaseAction[] = [
   'ACCEPT_SHEET',
   'CONFIRM_PART_I',
   'EMPLOYEE_ACK_PART_I',
+  // The first assessment has its own talk (§7 rozp. 2015), not split yet.
+  'RECORD_ASSESSMENT_TALK',
 ];
 const FIRST_ONLY: readonly CaseAction[] = [
   'REPORT_SUBMITTED',
@@ -139,11 +147,29 @@ export function actionBlocker(
       return stage === 'INTRO_TALK'
         ? `Najpierw przeprowadź rozmowę wstępną i wyznacz termin sprawozdania (§3–§4 ${RP_2015}).`
         : `Formularz pierwszej oceny jest już otwarty; sprawa jest na ${here}.`;
+    case 'RECORD_ASSESSMENT_TALK':
+      if (stage === 'ASSESSMENT_TALK') return null;
+      if (record.assessmentTalkOn) {
+        return `Rozmowę oceniającą odnotowano już (${formatDatePl(record.assessmentTalkOn)}); sprawa jest na ${here}.`;
+      }
+      return stage === 'ASSESSMENT'
+        ? `Rozmowę oceniającą odnotowuje się po wypełnieniu formularza oceny kompetencji: najpierw wpisz oceny cząstkowe wszystkich kryteriów (Poradnik „Oceny okresowe w służbie cywilnej”, Tabela nr 1, etap II: wypełniony na roboczo arkusz oceny przed rozmową).`
+        : `Rozmowę oceniającą przeprowadza się pod koniec okresu oceny, po wypełnieniu formularza oceny kompetencji; sprawa jest na ${here}.`;
     case 'SIGN_ASSESSMENT':
-      if (PART_II_STAGES.includes(stage)) return null;
-      return DOCUMENT_STAGES.includes(stage)
-        ? `Ocena została już zatwierdzona przez oceniającego ${formatDatePl(record.signedByEvaluatorOn!)}.`
-        : `Ocenę można zatwierdzić dopiero w otwartym formularzu oceny kompetencji, po ocenie wszystkich kryteriów; sprawa jest na ${here}.`;
+      if (DOCUMENT_STAGES.includes(stage)) {
+        return `Ocena została już zatwierdzona przez oceniającego ${formatDatePl(record.signedByEvaluatorOn!)}.`;
+      }
+      if (record.path === 'FIRST') {
+        return PART_II_STAGES.includes(stage)
+          ? null
+          : `Ocenę można zatwierdzić dopiero w otwartym formularzu pierwszej oceny; sprawa jest na ${here}.`;
+      }
+      // §10: the talk comes before the assessment is made in writing.
+      if (stage === 'ASSESSMENT_TALK') {
+        return `Najpierw odnotuj rozmowę oceniającą (${ASSESSMENT_TALK_LEGAL_BASIS}: przed sporządzeniem oceny na piśmie oceniający przeprowadza z ocenianym rozmowę oceniającą).`;
+      }
+      if (stage === 'JUSTIFICATION' && record.assessmentTalkOn) return null;
+      return `Ocenę można zatwierdzić dopiero w otwartym formularzu oceny kompetencji, po ocenie wszystkich kryteriów i po rozmowie oceniającej, w kroku „${STAGE_NAMES.JUSTIFICATION}”; sprawa jest na ${here}.`;
     case 'SEND_FOR_ACK':
       if (!DOCUMENT_STAGES.includes(stage)) {
         return `Najpierw zatwierdź ocenę (podpis oceniającego); dopiero zatwierdzoną ocenę przekazuje się do zapoznania. Sprawa jest na ${here}.`;
@@ -177,6 +203,12 @@ export function availableActions(
   return CASE_ACTIONS.filter((a) => actionBlocker(record, a, today) === null);
 }
 
+/** Extra fields of POST /cases/:id/actions. */
+export interface ActionInput {
+  /** RECORD_ASSESSMENT_TALK: the day of the talk; today when missing. */
+  date?: string;
+}
+
 /**
  * The process state machine. Returns the updated copy of the record, or
  * throws CaseRuleError with a Polish explanation of why the transition is not
@@ -186,6 +218,7 @@ export function applyAction(
   record: CaseRecord,
   action: CaseAction,
   today: string,
+  input: ActionInput = {},
 ): CaseRecord {
   const blocker = actionBlocker(record, action, today);
   if (blocker) {
@@ -254,6 +287,18 @@ export function applyAction(
         );
       }
       break;
+    case 'RECORD_ASSESSMENT_TALK': {
+      const date = input.date ?? today;
+      const errors = assessmentTalkDateErrors(record, date, today);
+      if (errors.length > 0) throw new CaseValidationError(errors);
+      next.assessmentTalkOn = date;
+      next.completedOn.ASSESSMENT ??= date;
+      next.completedOn.ASSESSMENT_TALK = date;
+      log(
+        `Odnotowano rozmowę oceniającą przeprowadzoną ${formatDatePl(date)} (${ASSESSMENT_TALK_LEGAL_BASIS}). Teraz oceniający weryfikuje formularz, uwzględniając wnioski z rozmowy, i podpisuje ocenę (§11 ust. 2 ${RO_2016}).`,
+      );
+      break;
+    }
     case 'SIGN_ASSESSMENT': {
       const errors = formalCheck(record, today).filter((item) => !item.ok);
       if (errors.length > 0) {
@@ -265,6 +310,7 @@ export function applyAction(
       next.signedByEvaluatorOn = today;
       if (next.path === 'PERIODIC') {
         next.completedOn.ASSESSMENT ??= today;
+        next.completedOn.ASSESSMENT_TALK ??= next.assessmentTalkOn ?? today;
         next.completedOn.JUSTIFICATION = today;
         next.stage = 'DOCUMENT';
       } else {

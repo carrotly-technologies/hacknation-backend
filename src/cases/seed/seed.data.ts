@@ -54,6 +54,7 @@ export function buildSeed(today: string): CaseRecord[] {
     firstAssessmentCase(r),
     afterNegativeCase(r),
     objectionPeriodCase(r),
+    assessmentTalkCase(r),
     ...otherUnitCases(r),
   ];
 }
@@ -526,7 +527,8 @@ function objectionPeriodCase(r: Rel): CaseRecord {
       OSP_ANALYSIS: r.months(-24, 2),
       OPENING_TALK: confirmed,
       OBSERVATION: r.days(-9),
-      ASSESSMENT: r.days(-7),
+      ASSESSMENT: r.days(-8),
+      ASSESSMENT_TALK: r.days(-7),
       JUSTIFICATION: signed,
       DOCUMENT: acknowledged,
     },
@@ -581,6 +583,7 @@ function objectionPeriodCase(r: Rel): CaseRecord {
     justification:
       'Oceniana przez cały okres przygotowywała opinie do projektów aktów prawnych terminowo i bez błędów merytorycznych. Wyróżnia ją łączenie wiedzy z kilku dziedzin prawa i proponowanie nowych rozwiązań (m.in. lista kontrolna oceny skutków regulacji). Organizacja pracy i komunikacja na poziomie oczekiwań.',
     iprz: 'Szkolenie z prowadzenia spotkań konsultacyjnych (I półrocze); udział w zespole ds. wdrożenia aktu w sprawie AI jako ekspert; mentoring nowej osoby w wydziale.',
+    assessmentTalkOn: r.days(-7),
     signedByEvaluatorOn: signed,
     sentForAckOn: signed,
     acknowledgedOn: acknowledged,
@@ -588,6 +591,10 @@ function objectionPeriodCase(r: Rel): CaseRecord {
       {
         date: confirmed,
         text: 'Rozmowa rozpoczynająca. Zatwierdzono część I (kryterium dodatkowe: Kreatywność).',
+      },
+      {
+        date: r.days(-7),
+        text: `Odnotowano rozmowę oceniającą przeprowadzoną ${formatDatePl(r.days(-7))} (§10 rozp. PRM z 4.04.2016).`,
       },
       {
         date: signed,
@@ -600,6 +607,138 @@ function objectionPeriodCase(r: Rel): CaseRecord {
       {
         date: acknowledged,
         text: 'Nowy cykl oceny: rozmowa rozpoczynająca w 30 dni od sporządzenia oceny (§7 pkt 1). Sprzeciw nie wstrzymuje nowego cyklu.',
+      },
+    ],
+  });
+}
+
+/**
+ * Every criterion rated as a draft (Poradnik, Tabela nr 1, etap II), the
+ * assessment talk (etap III, §10 rozp. 2016) is next.
+ */
+function assessmentTalkCase(r: Rel): CaseRecord {
+  const id = 'c-007';
+  const confirmed = r.months(-24, 20);
+  const due = defaultAssessmentDue(confirmed);
+  const startedAssessment = r.days(-6);
+  const drafted = r.days(-2);
+  return caseRecord({
+    id,
+    person: {
+      id: 'p-zielinska',
+      firstName: 'Katarzyna',
+      lastName: 'Zielińska',
+      position:
+        'Starszy specjalista do spraw zarządzania kryzysowego w cyberprzestrzeni',
+      unit: TEAM_UNIT,
+      employment: 'PRACOWNIK',
+      hiredOn: '2016-06-01',
+    },
+    evaluatorId: SUPERVISOR_ID,
+    path: 'PERIODIC',
+    sheetId: 'C',
+    ospId: 'osp-dc-wzksoic-6',
+    cycleStart: { kind: 'PREVIOUS_POSITIVE', assessedOn: r.months(-25, 20) },
+    stage: 'ASSESSMENT',
+    completedOn: {
+      OSP_ANALYSIS: r.months(-24, 16),
+      OPENING_TALK: confirmed,
+      OBSERVATION: startedAssessment,
+      ASSESSMENT: drafted,
+    },
+    partI: {
+      additionalCriteria: ['myslenie_analityczne'],
+      assessmentDue: due,
+      topics: {
+        duties:
+          'Omówiono zadania z OSP: monitorowanie incydentów w cyberprzestrzeni, przygotowanie raportów sytuacyjnych dla kierownictwa i udział w ćwiczeniach zarządzania kryzysowego.',
+        criteria:
+          'Pięć kryteriów obowiązkowych arkusza C oraz kryterium dodatkowe „Myślenie analityczne”: raporty sytuacyjne wymagają oceny wielu źródeł informacji.',
+        expectations:
+          'Uzgodniono oczekiwania na poziomie „na poziomie oczekiwań”; szczególny nacisk na terminowość raportów i jasność rekomendacji.',
+        goals:
+          'Przygotowanie procedury przekazywania raportu sytuacyjnego poza godzinami pracy do końca 2025 r.',
+      },
+      expectations: {
+        wykorzystywanie_wiedzy:
+          'Zna aktualne przepisy o krajowym systemie cyberbezpieczeństwa i stosuje je w raportach.',
+        rzetelnosc:
+          'Raporty sytuacyjne kompletne, sprawdzone i przekazane w uzgodnionym czasie.',
+        organizacja_pracy:
+          'Planuje dyżury i ćwiczenia z wyprzedzeniem; zgłasza ryzyko opóźnienia.',
+        wspolpraca:
+          'Wymienia informacje z zespołami reagowania i innymi komórkami urzędu.',
+        komunikacja:
+          'Rekomendacje dla kierownictwa są zwięzłe i zrozumiałe bez wiedzy technicznej.',
+        myslenie_analityczne:
+          'Łączy informacje z wielu źródeł i odróżnia potwierdzone ustalenia od hipotez.',
+      },
+      confirmedByEvaluatorOn: confirmed,
+      acknowledgedByEmployeeOn: confirmed,
+    },
+    observations: observations(id, [
+      {
+        date: r.months(-15, 3),
+        criterionId: 'myslenie_analityczne',
+        indicatorId: 'myslenie_analityczne.3',
+        kind: 'STRENGTH',
+        situation:
+          'Seria zgłoszeń o niedostępności usług publicznych w ciągu jednego dnia.',
+        action:
+          'Zestawiła zgłoszenia z danymi z monitoringu i wskazała wspólną przyczynę, z zaznaczeniem, które ustalenia są potwierdzone.',
+        result:
+          'Kierownictwo podjęło decyzję o komunikacie dla obywateli w ciągu godziny.',
+      },
+      {
+        date: r.months(-7, 12),
+        criterionId: 'komunikacja',
+        indicatorId: 'komunikacja.2',
+        kind: 'DEVELOPMENT',
+        situation: 'Raport sytuacyjny dla kierownictwa po ćwiczeniu krajowym.',
+        action:
+          'Raport zawierał szczegóły techniczne bez podsumowania i rekomendacji na początku.',
+        result:
+          'Kierownictwo poprosiło o skróconą wersję; uzgodniłyśmy wzór z podsumowaniem na pierwszej stronie.',
+      },
+      {
+        date: r.days(-20),
+        criterionId: 'rzetelnosc',
+        indicatorId: 'rzetelnosc.2',
+        kind: 'STRENGTH',
+        situation: 'Kwartalne zestawienie incydentów dla ministra.',
+        action:
+          'Przygotowała zestawienie według nowego wzoru i sprawdziła dane z dwoma zespołami reagowania.',
+        result: 'Zestawienie przyjęto bez uwag i przed terminem.',
+      },
+    ]),
+    ratings: {
+      wykorzystywanie_wiedzy: ratingsFor('wykorzystywanie_wiedzy', 5),
+      rzetelnosc: ratingsFor('rzetelnosc', 7),
+      organizacja_pracy: ratingsFor('organizacja_pracy', 5),
+      wspolpraca: ratingsFor('wspolpraca', 5),
+      komunikacja: ratingsFor('komunikacja', 3, { 'komunikacja.1': 5 }),
+      myslenie_analityczne: ratingsFor('myslenie_analityczne', 7),
+    },
+    decisions: {
+      wykorzystywanie_wiedzy: 5,
+      rzetelnosc: 7,
+      organizacja_pracy: 5,
+      wspolpraca: 5,
+      komunikacja: 3,
+      myslenie_analityczne: 7,
+    },
+    history: [
+      {
+        date: confirmed,
+        text: `Rozmowa rozpoczynająca. Oceniający zatwierdził część I (kryterium dodatkowe: Myślenie analityczne), termin sporządzenia oceny: ${formatDatePl(due)}. Oceniany potwierdził zapoznanie.`,
+      },
+      {
+        date: startedAssessment,
+        text: 'Otwarto formularz oceny kompetencji (część II arkusza).',
+      },
+      {
+        date: drafted,
+        text: 'Wypełniono na roboczo oceny cząstkowe wszystkich kryteriów. Następny krok: rozmowa oceniająca.',
       },
     ],
   });
@@ -633,6 +772,7 @@ function otherUnitCases(r: Rel): CaseRecord[] {
         OPENING_TALK: '2024-11-20',
         OBSERVATION: r.days(-6),
         ASSESSMENT: r.days(-4),
+        ASSESSMENT_TALK: r.days(-3),
         JUSTIFICATION: signed,
       },
       partI: {
@@ -649,6 +789,7 @@ function otherUnitCases(r: Rel): CaseRecord[] {
         komunikacja: 5,
       },
       iprz: 'Szkolenie z kontroli rozliczeń dotacji; samodzielne prowadzenie rozliczeń w nowym systemie finansowym.',
+      assessmentTalkOn: r.days(-3),
       signedByEvaluatorOn: signed,
       sentForAckOn: signed,
       history: [

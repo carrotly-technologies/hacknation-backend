@@ -14,6 +14,7 @@ import {
   type StageId,
   type StageInfo,
 } from './case.types.js';
+import { ASSESSMENT_TALK_LEGAL_BASIS } from './assessment-talk.rules.js';
 import { addMonths } from './dates.js';
 import {
   assessmentDueDeadline,
@@ -32,8 +33,13 @@ export const STAGE_LEGAL_BASIS: Record<StageId, string> = {
   SHEET_PROPOSAL: `§3 ust. 3–4, §2 ust. 2 i §5 ust. 2 ${RO_2016}`,
   OPENING_TALK: `§5–§7 ${RO_2016}`,
   OBSERVATION: `art. 81 ust. 1 ${USC}; §5 ust. 3 ${RO_2016}`,
-  ASSESSMENT: `§10, §11 ust. 1 pkt 1–4 ${RO_2016}`,
-  JUSTIFICATION: `§11 ust. 1 pkt 5 i ust. 3–4 ${RO_2016}; art. 108 ${USC}`,
+  // Poradnik, Tabela nr 1, etap II: „wypełniony na roboczo arkusz oceny”.
+  ASSESSMENT: `§11 ust. 1 pkt 1–4 ${RO_2016}`,
+  // Etap III: rozmowa oceniająca przed sporządzeniem oceny na piśmie.
+  ASSESSMENT_TALK: ASSESSMENT_TALK_LEGAL_BASIS,
+  // Etap IV: sporządzenie oceny na piśmie z wnioskami z rozmowy (§11 ust. 2),
+  // uzasadnienie (ust. 3–4), IPRZ (ust. 1 pkt 5, art. 108 ustawy).
+  JUSTIFICATION: `§11 ${RO_2016}; art. 108 ${USC}`,
   DOCUMENT: `§12 ${RO_2016}; art. 83 ust. 1 ${USC}`,
   INTRO_TALK: `§3–§4 ${RP_2015}`,
   REPORT: `§4 ust. 1, §6 ${RP_2015}`,
@@ -68,6 +74,7 @@ function stageDeadlineSpec(
       return openingTalkDeadline(record.cycleStart);
     case 'OBSERVATION':
     case 'ASSESSMENT':
+    case 'ASSESSMENT_TALK':
     case 'JUSTIFICATION':
       return assessmentDueDeadline(
         record.cycleStart,

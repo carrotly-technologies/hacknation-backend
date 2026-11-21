@@ -4,7 +4,7 @@ import {
   availableActions,
 } from './actions.rules.js';
 import { effectiveStage, STAGE_NAMES } from './case.rules.js';
-import { CaseRuleError } from './case-rule.error.js';
+import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
 import type { CaseAction, CaseRecord } from './case.types.js';
 import { applyPatch } from './patch.rules.js';
 import { buildSeed } from './seed/seed.data.js';
@@ -75,11 +75,17 @@ describe('periodic state machine', () => {
     );
 
     r = decideAll(r);
+    expect(effectiveStage(r)).toBe('ASSESSMENT_TALK');
+    expect(availableActions(r, TODAY)).toEqual(['RECORD_ASSESSMENT_TALK']);
+    r = run(r, 'RECORD_ASSESSMENT_TALK');
     expect(effectiveStage(r)).toBe('JUSTIFICATION');
+    expect(r.assessmentTalkOn).toBe(TODAY);
+    expect(r.completedOn.ASSESSMENT_TALK).toBe(TODAY);
     r = applyPatch(r, { iprz: 'Szkolenie z analizy ryzyka.' }, TODAY);
     r = run(r, 'SIGN_ASSESSMENT');
     expect(effectiveStage(r)).toBe('DOCUMENT');
     expect(r.signedByEvaluatorOn).toBe(TODAY);
+    expect(r.completedOn.JUSTIFICATION).toBe(TODAY);
 
     r = run(r, 'SEND_FOR_ACK');
     expect(caseStatus(r, TODAY)).toBe('DO_ZAPOZNANIA');
@@ -107,7 +113,13 @@ describe('periodic state machine', () => {
       },
       TODAY,
     );
-    r = run(r, 'SIGN_ASSESSMENT', 'SEND_FOR_ACK', 'EMPLOYEE_ACK_ASSESSMENT');
+    r = run(
+      r,
+      'RECORD_ASSESSMENT_TALK',
+      'SIGN_ASSESSMENT',
+      'SEND_FOR_ACK',
+      'EMPLOYEE_ACK_ASSESSMENT',
+    );
     const text = r.history.at(-1)!.text;
     expect(text).toContain('§7 pkt 2');
     expect(text).toContain('art. 81 ust. 9');
@@ -122,6 +134,7 @@ describe('periodic state machine', () => {
       'DONE',
       'CURRENT',
       'UPCOMING',
+      'LOCKED',
       'LOCKED',
     ]);
     // Seeded before the stage existed: falls back to the OSP analysis date.
@@ -142,7 +155,11 @@ describe('illegal transitions', () => {
     ['c-002', 'ACCEPT_SHEET', 'Najpierw zatwierdź analizę'],
     ['c-001', 'ACCEPT_SHEET', 'już zaakceptowany'],
     ['c-004', 'ACCEPT_SHEET', 'tylko oceny okresowej'],
-    ['c-002', 'SIGN_ASSESSMENT', 'dopiero w otwartym formularzu oceny kompetencji'],
+    [
+      'c-002',
+      'SIGN_ASSESSMENT',
+      'dopiero w otwartym formularzu oceny kompetencji',
+    ],
     ['c-001', 'CONFIRM_PART_I', 'już zatwierdzona'],
     ['c-001', 'EMPLOYEE_ACK_ASSESSMENT', 'po jej zatwierdzeniu'],
     ['c-005', 'EMPLOYEE_ACK_PART_I', 'Najpierw oceniający zatwierdza część I'],
@@ -163,11 +180,9 @@ describe('illegal transitions', () => {
   });
 
   it('SIGN_ASSESSMENT is refused with the failing formal checks', () => {
-    const error = conflict(() =>
-      applyAction(seed('c-001'), 'SIGN_ASSESSMENT', TODAY),
-    );
+    const r = run(decideAll(seed('c-001'), 3), 'RECORD_ASSESSMENT_TALK');
+    const error = conflict(() => applyAction(r, 'SIGN_ASSESSMENT', TODAY));
     expect(error.formalCheck?.map((f) => f.id)).toEqual([
-      'ALL_CRITERIA_DECIDED',
       'JUSTIFICATION_IF_NEGATIVE',
       'IPRZ_REQUIRED',
       'PROMOTION_REQUEST',
@@ -283,6 +298,7 @@ describe('patch locks and validation', () => {
         { iprz: 'Szkolenie.', promotionRequest: { attached: 'NO' } },
         TODAY,
       ),
+      'RECORD_ASSESSMENT_TALK',
       'SIGN_ASSESSMENT',
     );
     for (const patch of [
@@ -346,5 +362,99 @@ describe('step 4 is the assessment form, not a talk screen', () => {
     );
     expect(error.message).toContain('formularzu pierwszej oceny');
     expect(error.message).not.toContain('rozmowy oceniającej');
+  });
+});
+
+describe('assessment talk (etap III) and form verification (etap IV)', () => {
+  it('names the stages after the Poradnik, Tabela nr 1', () => {
+    expect(STAGE_NAMES.ASSESSMENT_TALK).toBe('Rozmowa oceniająca');
+    expect(STAGE_NAMES.JUSTIFICATION).toBe('Weryfikacja formularza');
+    expect(ACTION_LABELS.RECORD_ASSESSMENT_TALK).toBe(
+      'Rozmowa oceniająca przeprowadzona',
+    );
+    const stages = buildStages(seed('c-007'), TODAY);
+    expect(stages.map((s) => s.id)).toEqual([
+      'OSP_ANALYSIS',
+      'SHEET_PROPOSAL',
+      'OPENING_TALK',
+      'OBSERVATION',
+      'ASSESSMENT',
+      'ASSESSMENT_TALK',
+      'JUSTIFICATION',
+      'DOCUMENT',
+    ]);
+    expect(stages[5]).toMatchObject({
+      status: 'CURRENT',
+      legalBasis: '§10 rozp. PRM z 4.04.2016',
+      deadline: { label: expect.any(String) },
+    });
+    expect(stages[6].legalBasis).toContain('§11');
+  });
+
+  it('a seeded case with every criterion rated is at the talk', () => {
+    const r = seed('c-007');
+    expect(effectiveStage(r)).toBe('ASSESSMENT_TALK');
+    expect(availableActions(r, TODAY)).toEqual(['RECORD_ASSESSMENT_TALK']);
+  });
+
+  it('SIGN_ASSESSMENT needs the recorded talk (§10)', () => {
+    const error = conflict(() =>
+      applyAction(seed('c-007'), 'SIGN_ASSESSMENT', TODAY),
+    );
+    expect(error.message).toContain('Najpierw odnotuj rozmowę oceniającą (§10');
+  });
+
+  it('records the date given, not in the future and not before part I', () => {
+    const r = applyAction(seed('c-007'), 'RECORD_ASSESSMENT_TALK', TODAY, {
+      date: '2026-11-19',
+    });
+    expect(r).toMatchObject({
+      assessmentTalkOn: '2026-11-19',
+      completedOn: { ASSESSMENT_TALK: '2026-11-19' },
+    });
+    expect(effectiveStage(r)).toBe('JUSTIFICATION');
+    expect(r.history.at(-1)).toMatchObject({
+      date: TODAY,
+      text: expect.stringContaining('19.11.2026'),
+    });
+    expect(availableActions(r, TODAY)).toContain('SIGN_ASSESSMENT');
+
+    expect(() =>
+      applyAction(seed('c-007'), 'RECORD_ASSESSMENT_TALK', TODAY, {
+        date: '2026-11-22',
+      }),
+    ).toThrow(CaseValidationError);
+    expect(() =>
+      applyAction(seed('c-007'), 'RECORD_ASSESSMENT_TALK', TODAY, {
+        date: '2020-01-02',
+      }),
+    ).toThrow(/wcześniejsza niż zapoznanie ocenianego z częścią I/);
+  });
+
+  it('is recorded once, and only after every criterion is rated', () => {
+    const done = run(seed('c-007'), 'RECORD_ASSESSMENT_TALK');
+    expect(
+      conflict(() => run(done, 'RECORD_ASSESSMENT_TALK')).message,
+    ).toContain('odnotowano już');
+    expect(
+      conflict(() => run(seed('c-001'), 'RECORD_ASSESSMENT_TALK')).message,
+    ).toContain('najpierw wpisz oceny cząstkowe');
+    expect(
+      conflict(() => run(seed('c-004'), 'RECORD_ASSESSMENT_TALK')).message,
+    ).toContain('tylko oceny okresowej');
+  });
+
+  it('the form stays editable after the talk, until the signature', () => {
+    const r = applyPatch(
+      run(seed('c-007'), 'RECORD_ASSESSMENT_TALK'),
+      { decisions: { komunikacja: 5 }, justification: 'Po rozmowie.' },
+      TODAY,
+    );
+    expect(effectiveStage(r)).toBe('JUSTIFICATION');
+    expect(r.decisions.komunikacja).toBe(5);
+    // Clearing a decision goes back to the form; the talk date stays.
+    const back = applyPatch(r, { decisions: { komunikacja: null } }, TODAY);
+    expect(effectiveStage(back)).toBe('ASSESSMENT');
+    expect(back.assessmentTalkOn).toBe(TODAY);
   });
 });

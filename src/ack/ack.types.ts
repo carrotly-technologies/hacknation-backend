@@ -28,6 +28,7 @@ export interface AckSheetData {
   previousAssessment: CaseDetail['previousAssessment'];
   promotionRequest: CaseDetail['promotionRequest'];
   firstConditions: CaseDetail['firstConditions'];
+  assessmentTalkOn: string | null;
   signedByEvaluatorOn: string | null;
   acknowledgedOn: null;
 }

@@ -38,9 +38,10 @@ const LOCKED_NOTE =
  * - §10 rozp. PRM z 4.04.2016 (Dz.U. 2016 poz. 470): „Przed sporządzeniem
  *   oceny na piśmie oceniający przeprowadza z ocenianym rozmowę oceniającą…”;
  *   §11 ust. 2: „Sporządzając ocenę na piśmie, oceniający bierze pod uwagę
- *   wnioski z rozmowy oceniającej.” The draft stays editable after the talk;
- *   the assessment "na piśmie" is made by the evaluator's signature
- *   (SIGN_ASSESSMENT, still available only after START_ASSESSMENT).
+ *   wnioski z rozmowy oceniającej.” The draft stays editable after the talk
+ *   (step „Weryfikacja formularza”, JUSTIFICATION); the assessment "na
+ *   piśmie" is made by the evaluator's signature (SIGN_ASSESSMENT, available
+ *   only after the talk was recorded, RECORD_ASSESSMENT_TALK).
  * - §12 ust. 1: the employee is acquainted with the signed assessment, so the
  *   sheet is locked from the signature on (DOCUMENT stage).
  *
@@ -52,6 +53,7 @@ const PERIODIC_PART_II: readonly StageId[] = [
   'OPENING_TALK',
   'OBSERVATION',
   'ASSESSMENT',
+  'ASSESSMENT_TALK',
   'JUSTIFICATION',
 ];
 

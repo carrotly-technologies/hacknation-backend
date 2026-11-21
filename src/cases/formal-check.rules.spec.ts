@@ -33,6 +33,7 @@ describe('formalCheck: periodic', () => {
       ['ALL_CRITERIA_DECIDED', false],
       ['POINTS_IN_SCALE', true],
       ['ADDITIONAL_CRITERIA_CONSISTENT', true],
+      ['ASSESSMENT_TALK_HELD', false],
       ['JUSTIFICATION_IF_NEGATIVE', false],
       ['IPRZ_REQUIRED', false],
       ['PROMOTION_REQUEST', false],
@@ -66,6 +67,20 @@ describe('formalCheck: periodic', () => {
     );
   });
 
+  it('the assessment talk must be recorded before the signature (§10)', () => {
+    const r = decided([5, 5, 5, 5, 5, 5]);
+    expect(item(r, 'ASSESSMENT_TALK_HELD')).toMatchObject({
+      ok: false,
+      legalBasis: expect.stringContaining('§10'),
+    });
+    expect(
+      item({ ...r, assessmentTalkOn: '2026-11-19' }, 'ASSESSMENT_TALK_HELD'),
+    ).toMatchObject({
+      ok: true,
+      message: 'Rozmowa oceniająca przeprowadzona 19.11.2026.',
+    });
+  });
+
   it('detects criteria in part II that were not set in part I', () => {
     const r = { ...decided([5, 5, 5, 5, 5, 5]) };
     r.decisions = { ...r.decisions, kreatywnosc: 5 };
@@ -86,6 +101,7 @@ describe('formalCheck: periodic', () => {
     const r = {
       ...base,
       iprz: 'Plan.',
+      assessmentTalkOn: '2026-11-20',
       promotionRequest: { ...base.promotionRequest, attached: 'NO' as const },
     };
     expect(formalCheck(r, TODAY).every((i) => i.ok)).toBe(true);

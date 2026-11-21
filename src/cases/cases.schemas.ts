@@ -138,6 +138,8 @@ export const actionSchema = z.object({
   action: z.enum(CASE_ACTIONS as [string, ...string[]], {
     error: `action musi mieć jedną z wartości: ${CASE_ACTIONS.join(', ')}.`,
   }),
+  /** RECORD_ASSESSMENT_TALK only: the day of the talk (today when missing). */
+  date: isoDate.optional(),
 });
 export type ActionInput = z.infer<typeof actionSchema>;
 

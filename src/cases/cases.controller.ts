@@ -77,7 +77,9 @@ export class CasesController {
     @Param('id') id: string,
     @Body({ schema: actionSchema }) body: ActionInput,
   ): Promise<CaseDetail> {
-    return this.cases.action(id, body.action as CaseAction);
+    return this.cases.action(id, body.action as CaseAction, {
+      date: body.date,
+    });
   }
 
   /** Demo tool: any signed-in role may restore the seed. */

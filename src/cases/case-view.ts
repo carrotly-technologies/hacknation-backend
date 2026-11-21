@@ -2,6 +2,7 @@ import { analyseOsp } from '../osp/osp-analysis.rules.js';
 import { findOsp, toOspDoc } from '../osp/osp.data.js';
 import { ackLinkOf } from './ack-link.rules.js';
 import { availableActions } from './actions.rules.js';
+import { assessmentTalkTopics } from './assessment-talk.rules.js';
 import { computeEvaluation, effectiveStage } from './case.rules.js';
 import type {
   CaseAction,
@@ -60,6 +61,8 @@ export function toDetail(
     previousAssessment: record.previousAssessment,
     promotionRequest: promotionRequestOf(record),
     firstConditions: record.firstConditions,
+    assessmentTalkOn: record.assessmentTalkOn,
+    assessmentTalkTopics: assessmentTalkTopics(record),
     evaluation: computeEvaluation(record, today),
     formalCheck: formalCheck(record, today),
     signedByEvaluatorOn: record.signedByEvaluatorOn,

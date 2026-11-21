@@ -65,7 +65,7 @@ describe('Assistant (e2e, no LLM configured)', () => {
       question: 'Pomóż przygotować rozmowę oceniającą',
       assistant: 'CONVERSATION',
       caseId: 'c-001',
-      stageId: 'ASSESSMENT',
+      stageId: 'ASSESSMENT_TALK',
     }).expect(200);
     expect(res.body.mode).toBe('EXTRACTIVE');
     expect(res.body.answer).toContain('Pytania do rozmowy:');
