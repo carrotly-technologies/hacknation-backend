@@ -89,7 +89,8 @@ by `node scripts/generate-model-data.mjs` (then run prettier on it). Don't edit 
 | -------------------------------------- | ------------------------------------------------------------------------------- |
 | `POST /api/assistant/ask`              | `{ question, assistant: FORMAL\|CONVERSATION, caseId?, stageId? }` → answer + sources |
 | `GET /api/assistant/suggestions`       | Example questions, `?stageId=` per stage                                        |
-| `GET /api/assistant/documents`         | Every source document: `{ id, title, url, indexed, note }`                      |
+| `GET /api/assistant/documents`         | Every source document: `{ id, title, description, url, indexed, note }`         |
+| `GET /api/docs`                        | Same list, always on (also with `FEATURE_ASSISTANT=false`)                      |
 | `GET /api/docs/<path>`                 | The original file from `docs/` (404 outside it: `..`, absolute paths, dotfiles) |
 
 - Every answer source has `url`: `/api/docs/<file>` (relative to the API origin, `#page=N` for a PDF excerpt), the

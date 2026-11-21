@@ -7,11 +7,23 @@ import {
   Param,
   StreamableFile,
 } from '@nestjs/common';
+import {
+  type DocumentListItem,
+  listDocuments,
+} from '../assistant/documents.js';
 import { contentType, resolveDocFile } from './docs-files.js';
 
-/** GET /api/docs/<path>: the original source documents from docs/. */
+/**
+ * GET /api/docs: the list of source documents; GET /api/docs/<path>: the
+ * originals from docs/. Always on, also with FEATURE_ASSISTANT=false.
+ */
 @Controller('docs')
 export class DocsController {
+  @Get()
+  list(): DocumentListItem[] {
+    return listDocuments();
+  }
+
   @Get('*path')
   file(@Param('path') path: string | string[]): StreamableFile {
     const rel = Array.isArray(path) ? path.join('/') : path;

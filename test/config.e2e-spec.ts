@@ -58,5 +58,15 @@ describe('Config and FEATURE_ASSISTANT (e2e)', () => {
     await request(app.getHttpServer())
       .get('/api/assistant/suggestions')
       .expect(404);
+    await request(app.getHttpServer())
+      .get('/api/assistant/documents')
+      .expect(404);
+    const docs = await request(app.getHttpServer())
+      .get('/api/docs')
+      .expect(200);
+    expect((docs.body as unknown[]).length).toBeGreaterThan(0);
+    await request(app.getHttpServer())
+      .get('/api/docs/ocena-okresowa/rozporzadzenie-oceny-okresowe-2016.pdf')
+      .expect(200);
   });
 });

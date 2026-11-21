@@ -57,9 +57,17 @@ describe('Source documents (e2e)', () => {
     '/api/docs/%2fetc%2fpasswd',
     '/api/docs/ocena-okresowa',
     '/api/docs/nie-ma.pdf',
-    '/api/docs/',
   ])('returns 404 for %s', async (path) => {
     await get(path).expect(404);
+  });
+
+  it('lists the documents with descriptions at /api/docs', async () => {
+    const res = await get('/api/docs').expect(200);
+    const docs = res.body as { id: string; description: string }[];
+    expect(docs).toEqual(
+      (await get('/api/assistant/documents').expect(200)).body,
+    );
+    for (const d of docs) expect(d.description, d.id).not.toBe('');
   });
 
   it('lists the documents with links', async () => {
