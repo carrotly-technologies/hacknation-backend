@@ -86,7 +86,7 @@ function partIIGuard(record: CaseRecord, field: string): void {
   throw new CaseRuleError(
     record.path === 'PERIODIC'
       ? `Pole „${field}” można wypełnić, gdy wybrany jest arkusz oceny; sprawa jest na etapie „${STAGE_NAMES[stage]}”. Zaakceptuj analizę opisu stanowiska, aby wybrać arkusz.`
-      : `Pole „${field}” wypełnia się na etapie rozmowy oceniającej i oceny; sprawa jest na etapie „${STAGE_NAMES[stage]}”. Etap otwiera złożenie sprawozdania albo upływ terminu na jego złożenie.`,
+      : `Pole „${field}” wypełnia się w formularzu pierwszej oceny; sprawa jest na etapie „${STAGE_NAMES[stage]}”. Formularz otwiera złożenie sprawozdania albo upływ terminu na jego złożenie.`,
   );
 }
 

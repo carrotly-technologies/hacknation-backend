@@ -203,7 +203,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       expect(res.body.availableActions).not.toContain('SIGN_ASSESSMENT');
     }
     const res = await act('c-003', 'SIGN_ASSESSMENT').expect(409);
-    expect(res.body.message).toContain('dopiero po rozmowie oceniającej');
+    expect(res.body.message).toContain('dopiero w otwartym formularzu oceny kompetencji');
   });
 
   it('PATCH validates values (400) and stage locks (409)', async () => {

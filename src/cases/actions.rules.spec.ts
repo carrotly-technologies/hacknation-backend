@@ -1,5 +1,9 @@
-import { applyAction, availableActions } from './actions.rules.js';
-import { effectiveStage } from './case.rules.js';
+import {
+  ACTION_LABELS,
+  applyAction,
+  availableActions,
+} from './actions.rules.js';
+import { effectiveStage, STAGE_NAMES } from './case.rules.js';
 import { CaseRuleError } from './case-rule.error.js';
 import type { CaseAction, CaseRecord } from './case.types.js';
 import { applyPatch } from './patch.rules.js';
@@ -66,6 +70,9 @@ describe('periodic state machine', () => {
 
     r = run(r, 'EMPLOYEE_ACK_PART_I', 'START_ASSESSMENT');
     expect(effectiveStage(r)).toBe('ASSESSMENT');
+    expect(r.history.at(-1)!.text).toBe(
+      'Otwarto formularz oceny kompetencji (część II arkusza).',
+    );
 
     r = decideAll(r);
     expect(effectiveStage(r)).toBe('JUSTIFICATION');
@@ -135,7 +142,7 @@ describe('illegal transitions', () => {
     ['c-002', 'ACCEPT_SHEET', 'Najpierw zatwierdź analizę'],
     ['c-001', 'ACCEPT_SHEET', 'już zaakceptowany'],
     ['c-004', 'ACCEPT_SHEET', 'tylko oceny okresowej'],
-    ['c-002', 'SIGN_ASSESSMENT', 'dopiero po rozmowie oceniającej'],
+    ['c-002', 'SIGN_ASSESSMENT', 'dopiero w otwartym formularzu oceny kompetencji'],
     ['c-001', 'CONFIRM_PART_I', 'już zatwierdzona'],
     ['c-001', 'EMPLOYEE_ACK_ASSESSMENT', 'po jej zatwierdzeniu'],
     ['c-005', 'EMPLOYEE_ACK_PART_I', 'Najpierw oceniający zatwierdza część I'],
@@ -240,9 +247,9 @@ describe('patch locks and validation', () => {
       promotionRequest: { attached: 'NO' },
     });
     expect(r.completedOn.ASSESSMENT).toBeUndefined();
-    // Signing still needs the assessment talk.
+    // Signing still needs the competency form opened (START_ASSESSMENT).
     expect(conflict(() => run(r, 'SIGN_ASSESSMENT')).message).toContain(
-      'dopiero po rozmowie oceniającej',
+      'dopiero w otwartym formularzu oceny kompetencji',
     );
   });
 
@@ -321,5 +328,23 @@ describe('patch locks and validation', () => {
     expect(() =>
       applyPatch(seed('c-001'), { decisions: { komunikacja: 4 } }, TODAY),
     ).toThrow('1, 3, 5, 7 lub 9');
+  });
+});
+
+describe('step 4 is the assessment form, not a talk screen', () => {
+  it('names the stages and the action after the form', () => {
+    expect(STAGE_NAMES.ASSESSMENT).toBe('Formularz oceny kompetencji');
+    expect(STAGE_NAMES.FIRST_ASSESSMENT).toBe('Formularz pierwszej oceny');
+    expect(ACTION_LABELS.START_ASSESSMENT).toBe(
+      'Przejdź do formularza oceny kompetencji',
+    );
+  });
+
+  it('a first-assessment field before the form opens names the form', () => {
+    const error = conflict(() =>
+      applyPatch(seed('c-004'), { decisions: { rzetelnosc: 5 } }, TODAY),
+    );
+    expect(error.message).toContain('formularzu pierwszej oceny');
+    expect(error.message).not.toContain('rozmowy oceniającej');
   });
 });

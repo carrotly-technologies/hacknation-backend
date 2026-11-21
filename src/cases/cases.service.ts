@@ -38,12 +38,12 @@ const TODO_TEXT: Partial<Record<StageId, string>> = {
   OSP_ANALYSIS: 'przeanalizuj opis stanowiska',
   SHEET_PROPOSAL: 'zaakceptuj proponowany formularz oceny',
   OPENING_TALK: 'przeprowadź rozmowę rozpoczynającą (część I)',
-  OBSERVATION: 'zaplanuj rozmowę oceniającą przed terminem oceny',
-  ASSESSMENT: 'przeprowadź rozmowę oceniającą i oceń kryteria',
+  OBSERVATION: 'przejdź do formularza oceny kompetencji',
+  ASSESSMENT: 'wypełnij formularz oceny kompetencji',
   JUSTIFICATION: 'uzupełnij uzasadnienie i IPRZ, zatwierdź ocenę',
   INTRO_TALK: 'przeprowadź rozmowę wstępną i wyznacz termin sprawozdania',
   REPORT: 'odbierz sprawozdanie pracownika',
-  FIRST_ASSESSMENT: 'przeprowadź rozmowę oceniającą i oceń 5 elementów',
+  FIRST_ASSESSMENT: 'wypełnij formularz pierwszej oceny',
   FIRST_CONDITIONS: 'uzupełnij warunki pierwszej oceny i zatwierdź ocenę',
 };
 

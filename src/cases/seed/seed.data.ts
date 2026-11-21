@@ -233,7 +233,7 @@ function mainCase(r: Rel): CaseRecord {
       },
       {
         date: startedAssessment,
-        text: 'Rozpoczęto rozmowę oceniającą i ocenę (część II arkusza).',
+        text: 'Otwarto formularz oceny kompetencji (część II arkusza).',
       },
     ],
   });

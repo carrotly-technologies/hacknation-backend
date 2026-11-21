@@ -26,7 +26,7 @@ export const ACTION_LABELS: Record<CaseAction, string> = {
   ACCEPT_SHEET: 'Akceptuj formularz',
   CONFIRM_PART_I: 'Zatwierdź część I',
   EMPLOYEE_ACK_PART_I: 'Oceniany potwierdził zapoznanie z częścią I',
-  START_ASSESSMENT: 'Rozpocznij rozmowę oceniającą',
+  START_ASSESSMENT: 'Przejdź do formularza oceny kompetencji',
   SIGN_ASSESSMENT: 'Zatwierdź ocenę (podpis oceniającego)',
   SEND_FOR_ACK: 'Przekaż do zapoznania',
   EMPLOYEE_ACK_ASSESSMENT: 'Oceniany zapoznał się z oceną',
@@ -123,22 +123,22 @@ export function actionBlocker(
       if (record.path === 'PERIODIC') {
         if (stage === 'OBSERVATION') return null;
         return PART_II_STAGES.includes(stage) || DOCUMENT_STAGES.includes(stage)
-          ? `Rozmowa oceniająca została już rozpoczęta; sprawa jest na ${here}.`
-          : `Rozmowę oceniającą można rozpocząć dopiero w okresie oceny, po zatwierdzeniu części I i potwierdzeniu jej przez ocenianego; sprawa jest na ${here}.`;
+          ? `Formularz oceny kompetencji jest już otwarty; sprawa jest na ${here}.`
+          : `Formularz oceny kompetencji otwiera się w okresie oceny, po zatwierdzeniu części I i potwierdzeniu jej przez ocenianego; sprawa jest na ${here}.`;
       }
       if (stage === 'REPORT') {
         const due = record.firstConditions?.reportDue;
         if (due && today > due) return null;
-        return `Rozmowę oceniającą przeprowadza się niezwłocznie po złożeniu sprawozdania albo po upływie terminu na jego złożenie${due ? ` (${formatDatePl(due)})` : ''} (§7 pkt 1 ${RP_2015}). Gdy pracownik złoży sprawozdanie, użyj akcji „${ACTION_LABELS.REPORT_SUBMITTED}”.`;
+        return `Formularz pierwszej oceny otwiera się po złożeniu sprawozdania albo po upływie terminu na jego złożenie${due ? ` (${formatDatePl(due)})` : ''}: wtedy niezwłocznie przeprowadza się rozmowę oceniającą (§7 pkt 1 ${RP_2015}). Gdy pracownik złoży sprawozdanie, użyj akcji „${ACTION_LABELS.REPORT_SUBMITTED}”.`;
       }
       return stage === 'INTRO_TALK'
         ? `Najpierw przeprowadź rozmowę wstępną i wyznacz termin sprawozdania (§3–§4 ${RP_2015}).`
-        : `Rozmowa oceniająca została już rozpoczęta; sprawa jest na ${here}.`;
+        : `Formularz pierwszej oceny jest już otwarty; sprawa jest na ${here}.`;
     case 'SIGN_ASSESSMENT':
       if (PART_II_STAGES.includes(stage)) return null;
       return DOCUMENT_STAGES.includes(stage)
         ? `Ocena została już zatwierdzona przez oceniającego ${formatDatePl(record.signedByEvaluatorOn!)}.`
-        : `Ocenę można zatwierdzić dopiero po rozmowie oceniającej i ocenie wszystkich kryteriów; sprawa jest na ${here}.`;
+        : `Ocenę można zatwierdzić dopiero w otwartym formularzu oceny kompetencji, po ocenie wszystkich kryteriów; sprawa jest na ${here}.`;
     case 'SEND_FOR_ACK':
       if (!DOCUMENT_STAGES.includes(stage)) {
         return `Najpierw zatwierdź ocenę (podpis oceniającego); dopiero zatwierdzoną ocenę przekazuje się do zapoznania. Sprawa jest na ${here}.`;
@@ -242,12 +242,12 @@ export function applyAction(
       if (next.path === 'PERIODIC') {
         next.stage = 'ASSESSMENT';
         next.completedOn.OBSERVATION = today;
-        log('Rozpoczęto rozmowę oceniającą i ocenę (część II arkusza).');
+        log('Otwarto formularz oceny kompetencji (część II arkusza).');
       } else {
         next.stage = 'FIRST_ASSESSMENT';
         next.completedOn.REPORT = today;
         log(
-          `Upłynął termin na złożenie sprawozdania bez jego złożenia; rozpoczęto rozmowę oceniającą (§7 pkt 1 ${RP_2015}). Warunek z §10 ust. 1 pkt 2 nie jest spełniony.`,
+          `Upłynął termin na złożenie sprawozdania bez jego złożenia; otwarto formularz pierwszej oceny, rozmowę oceniającą przeprowadza się niezwłocznie (§7 pkt 1 ${RP_2015}). Warunek z §10 ust. 1 pkt 2 nie jest spełniony.`,
         );
       }
       break;
