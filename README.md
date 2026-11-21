@@ -67,8 +67,8 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 
 | Role         | May                                                                                                   | 403 on                                                    |
 | ------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*` |
-| `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only)                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*`, journal |
+| `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), `GET /api/people/:personId` (own team), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*` |
+| `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only), `GET /api/people/:personId`                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*`, journal |
 | `ADMIN`      | `/api/admin/*`                                                                                        | cases, `/api/team`, `/api/hr/*`, journal                  |
 | every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP, `POST /api/demo/reset` | —                                                         |
 
@@ -134,6 +134,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
 | `POST /api/demo/reset`           | Restores the seed (cases and the journal)                                                |
+| `GET /api/people/:personId`      | Employee profile: `{ person, supervisor, history, currentCase, nextAssessment }`. `history` is newest first: `{ source: 'SYSTEM', caseId, path, cycleLabel, status, result, level, signedByEvaluatorOn, acknowledgedOn }` per case (`result` once signed) and last `{ source: 'EXTERNAL', result, level, date }` (the assessment before the system); `currentCase` = `{ id, path, currentStage }` of the newest unfinished case or `null`; `nextAssessment` `OKRESOWA` \| `PIERWSZA`. Built from the cases the caller may read; 404 for an unknown person and for someone else's employee |
 | `GET /api/cases/:id/sheet.pdf`   | The filled periodic sheet (A/B/C, parts I–III) as a PDF (Open Sans embedded); who may read the case may download it (403/404 as `GET /api/cases/:id`, 409 for the first assessment) |
 | `GET /api/cases/:id/sheet.docx`  | The same sheet as DOCX (Word, LibreOffice)                                                |
 | `GET /api/ack/:token`            | Public (no sign-in): the read-only sheet for the assessed person, or `{ acknowledgedOn, objectionDeadline }` once confirmed; 404 for an unknown, replaced or expired link |
