@@ -210,7 +210,7 @@ author only (someone else's entry: 404). Lists are newest first.
 
 | Route                                  | What it does                                                                    |
 | -------------------------------------- | ------------------------------------------------------------------------------- |
-| `POST /api/assistant/ask`              | `{ question, assistant: FORMAL\|CONVERSATION, caseId?, stageId? }` → answer + sources |
+| `POST /api/assistant/ask`              | `{ question, assistant: FORMAL\|CONVERSATION, caseId?, stageId?, history? }` → answer + sources; `history`: earlier exchanges of the same chat, oldest first, `[{ question, answer }]` (only the last 3 are used, each field cut to 2000 chars; never stored or logged) |
 | `GET /api/assistant/suggestions`       | Example questions, `?stageId=` per stage                                        |
 | `GET /api/assistant/documents`         | Every source document: `{ id, title, description, url, indexed, note }`         |
 | `GET /api/docs`                        | Same list                                                                       |
@@ -227,6 +227,11 @@ author only (someone else's entry: 404). Lists are newest first.
   is added at the path in the script (see `docs/README.md`). Don't edit the data file by hand.
 - Retrieval: local BM25 (`bm25.ts`, `text-normalize.ts`: no diacritics, light Polish stemming, bigrams); below a
   score/coverage threshold the answer is "Nie znalazłem tego w bazie wiedzy" with `grounded: false`.
+- Follow-ups (`src/assistant/followup.rules.ts`): with `history`, the last question is first turned into a standalone
+  one for retrieval: by the LLM (short rewrite call, 15 s budget) or, without an LLM or when the call fails, by a
+  heuristic (a short question, one starting with „a”, „i”, „to”, „czy to” or with a pronoun like „go”, „jej”, „ten”
+  gets the earlier question glued in front). The LLM also gets the earlier exchanges as the conversation, without their
+  citation numbers; sources and citations still come only from the knowledge base. Without `history` nothing changes.
 - Generation: optional, any OpenAI-compatible endpoint via `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL` (see
   `.env.example`). Without it, or when the call fails, answers are extractive (`mode: "EXTRACTIVE"`).
 - The assistant is always on: there is no feature flag (without an LLM it answers extractively).

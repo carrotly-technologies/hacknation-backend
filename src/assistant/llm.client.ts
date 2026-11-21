@@ -8,6 +8,11 @@ export interface ChatMessage {
 
 export const LLM_TIMEOUT_MS = 30_000;
 
+export interface ChatOptions {
+  /** Time budget for the whole call, across every model tried (default: LLM_TIMEOUT_MS per model). */
+  timeoutMs?: number;
+}
+
 /**
  * Minimal client for any OpenAI-compatible chat endpoint (Ollama, Groq,
  * OpenRouter, LM Studio, vLLM...). Configured by LLM_BASE_URL, LLM_API_KEY and
@@ -40,10 +45,20 @@ export class LlmClient {
    * Free hosted models are often rate-limited, so each configured model is
    * tried in turn.
    */
-  async chat(messages: ChatMessage[]): Promise<string | null> {
+  async chat(
+    messages: ChatMessage[],
+    options: ChatOptions = {},
+  ): Promise<string | null> {
     if (!this.configured) return null;
+    const deadline =
+      options.timeoutMs === undefined ? null : Date.now() + options.timeoutMs;
     for (const model of this.models) {
-      const text = await this.chatWith(model, messages);
+      const timeout =
+        deadline === null
+          ? LLM_TIMEOUT_MS
+          : Math.min(deadline - Date.now(), LLM_TIMEOUT_MS);
+      if (timeout <= 0) break;
+      const text = await this.chatWith(model, messages, timeout);
       if (text) return text;
     }
     return null;
@@ -52,6 +67,7 @@ export class LlmClient {
   private async chatWith(
     model: string,
     messages: ChatMessage[],
+    timeout: number,
   ): Promise<string | null> {
     try {
       const res = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -67,7 +83,7 @@ export class LlmClient {
           // Reasoning models spend part of the budget before the answer.
           max_tokens: 2500,
         }),
-        signal: AbortSignal.timeout(LLM_TIMEOUT_MS),
+        signal: AbortSignal.timeout(timeout),
       });
       const raw = await res.text();
       if (!res.ok) {

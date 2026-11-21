@@ -127,6 +127,99 @@ describe('AssistantService', () => {
     expect(prompt).toContain(person.position);
   });
 
+  describe('follow-up questions (history)', () => {
+    const history = [
+      {
+        question: 'Ile dni ma pracownik na sprzeciw od oceny okresowej?',
+        answer:
+          'Sprzeciw przysługuje w terminie 7 dni od zapoznania się z oceną [1].',
+      },
+    ];
+    const followUp = 'a do kogo się go składa?';
+    const isArt83 = (ref: string) => ref.startsWith('art. 83 ust. 1 ');
+
+    it('answers a follow-up without the LLM by gluing the earlier question', async () => {
+      chat.mockResolvedValue(null);
+      const res = await ask(followUp, { history });
+      expect(res).toMatchObject({ grounded: true, mode: 'EXTRACTIVE' });
+      expect(isArt83(res.sources[0].ref)).toBe(true);
+      expect(res.answer).toContain('dyrektora generalnego urzędu');
+    });
+
+    it('searches with the question rewritten by the LLM', async () => {
+      chat
+        .mockResolvedValueOnce(
+          'Do kogo składa się sprzeciw od oceny okresowej?',
+        )
+        .mockResolvedValueOnce('Do dyrektora generalnego urzędu [1].');
+      const res = await ask(followUp, { history });
+      expect(res).toMatchObject({
+        mode: 'LLM',
+        grounded: true,
+        answer: 'Do dyrektora generalnego urzędu [1].',
+      });
+      expect(res.sources.some((s) => isArt83(s.ref))).toBe(true);
+      const [rewrite, options] = chat.mock.calls[0];
+      expect(rewrite[1].content).toContain(history[0].question);
+      expect(rewrite[1].content).toMatch(/Ostatnie pytanie: a do kogo/);
+      expect(options).toEqual({ timeoutMs: expect.any(Number) });
+      // The answer call sees the conversation, the question as asked.
+      const [messages] = chat.mock.calls[1];
+      expect(messages.map((m) => m.role)).toEqual([
+        'system',
+        'user',
+        'assistant',
+        'user',
+      ]);
+      expect(messages[1].content).toBe(history[0].question);
+      expect(messages[2].content).not.toContain('[1]');
+      expect(messages[3].content).toMatch(
+        /Pytanie: a do kogo się go składa\?$/,
+      );
+    });
+
+    it('falls back to the heuristic when the rewrite fails', async () => {
+      chat
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce('Do dyrektora generalnego urzędu [1].');
+      const res = await ask(followUp, { history });
+      expect(res).toMatchObject({ mode: 'LLM', grounded: true });
+      expect(isArt83(res.sources[0].ref)).toBe(true);
+    });
+
+    it('without history, asks the LLM once, as before', async () => {
+      chat.mockResolvedValue('Co 24 miesiące [1].');
+      await ask('Jak często sporządza się ocenę okresową?');
+      expect(chat).toHaveBeenCalledTimes(1);
+      expect(chat.mock.calls[0][0]).toHaveLength(2);
+    });
+
+    it('gives the conversation assistant the history too', async () => {
+      chat
+        .mockResolvedValueOnce(
+          'Jak przekazać informację zwrotną o mocnych stronach?',
+        )
+        .mockResolvedValueOnce('Propozycje [1].');
+      await service.ask({
+        question: 'a o mocnych stronach?',
+        assistant: 'CONVERSATION',
+        caseId: 'c-001',
+        history: [
+          {
+            question: 'Jak przekazać informację zwrotną?',
+            answer: 'Metodą SDR [1].',
+          },
+        ],
+      });
+      const [messages] = chat.mock.calls[1];
+      expect(messages[0].content).toContain('Tryb asystenta rozmowy');
+      expect(messages[1]).toEqual({
+        role: 'user',
+        content: 'Jak przekazać informację zwrotną?',
+      });
+    });
+  });
+
   it('404s for an unknown case', async () => {
     await expect(
       service.ask({

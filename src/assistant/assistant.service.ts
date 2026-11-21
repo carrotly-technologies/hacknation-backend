@@ -21,6 +21,14 @@ import {
   STAGE_RULE_QUERY,
   STAGE_SUGGESTIONS,
 } from './conversation.rules.js';
+import {
+  type ChatExchange,
+  heuristicStandalone,
+  parseRewrite,
+  REWRITE_TIMEOUT_MS,
+  rewriteMessages,
+  withHistory,
+} from './followup.rules.js';
 import { KnowledgeBase } from './knowledge-base.js';
 import type { KnowledgeDocId } from './knowledge.types.js';
 import { LlmClient } from './llm.client.js';
@@ -41,22 +49,48 @@ export class AssistantService {
   async ask(input: AskInput): Promise<AskResponse> {
     // Scoped: only a case the caller may open (403 otherwise).
     const detail = input.caseId ? await this.cases.view(input.caseId) : null;
+    const history = input.history ?? [];
+    // Without history the query is the question itself, as before.
+    const query = await this.standalone(input.question, history);
     if (input.assistant === 'CONVERSATION' && detail) {
-      return this.conversation(input, detail);
+      return this.conversation(input, detail, history, query);
     }
-    return this.formal(input.question);
+    return this.formal(input.question, history, query);
   }
 
-  private async formal(question: string): Promise<AskResponse> {
+  /**
+   * A follow-up ("a do kogo się go składa?") as a standalone question for
+   * retrieval: rewritten by the language model, or by the heuristic when the
+   * model is not configured, fails or times out.
+   */
+  private async standalone(
+    question: string,
+    history: ChatExchange[],
+  ): Promise<string> {
+    if (history.length === 0) return question;
+    const reply = await this.llm.chat(rewriteMessages(question, history), {
+      timeoutMs: REWRITE_TIMEOUT_MS,
+    });
+    return (
+      (reply ? parseRewrite(reply) : null) ??
+      heuristicStandalone(question, history)
+    );
+  }
+
+  private async formal(
+    question: string,
+    history: ChatExchange[],
+    query: string,
+  ): Promise<AskResponse> {
     const ratingRequest = asksForRatingDecision(question);
     // A "which rating should I give" question is answered with the rules.
     const retrieval = retrieve(
       this.kb,
       ratingRequest
-        ? `${question} skala ocen cząstkowych poziom spełniania kryteriów`
-        : question,
+        ? `${query} skala ocen cząstkowych poziom spełniania kryteriów`
+        : query,
     );
-    const sources = toSources(retrieval.hits, question);
+    const sources = toSources(retrieval.hits, query);
     if (!retrieval.grounded) {
       return {
         answer: NOT_FOUND,
@@ -66,7 +100,9 @@ export class AssistantService {
         disclaimer: DISCLAIMER,
       };
     }
-    const reply = await this.llm.chat(buildMessages(question, retrieval.hits));
+    const reply = await this.llm.chat(
+      withHistory(buildMessages(question, retrieval.hits), history),
+    );
     if (reply) {
       const notFound = saysNotFound(reply);
       return {
@@ -91,23 +127,25 @@ export class AssistantService {
   private async conversation(
     input: AskInput,
     detail: CaseDetail,
+    history: ChatExchange[],
+    query: string,
   ): Promise<AskResponse> {
     const stage = input.stageId ?? detail.currentStage;
     // Only the rules of the case's path: periodic (RO, PO) or first (RP, PP).
     const otherPath: KnowledgeDocId[] =
       detail.path === 'FIRST' ? ['RO', 'PO'] : ['RP', 'PP'];
-    let retrieval: Retrieval = retrieve(this.kb, input.question, otherPath);
+    let retrieval: Retrieval = retrieve(this.kb, query, otherPath);
     if (!retrieval.grounded) {
       retrieval = retrieve(this.kb, STAGE_RULE_QUERY[stage], otherPath);
     }
-    const sources = toSources(retrieval.hits, input.question);
+    const sources = toSources(retrieval.hits, query);
     const messages = buildMessages(
       input.question,
       retrieval.hits,
       caseContext(detail, stage),
     );
     messages[0].content += `\n\n${CONVERSATION_ADDENDUM}`;
-    const reply = await this.llm.chat(messages);
+    const reply = await this.llm.chat(withHistory(messages, history));
     if (reply) {
       return {
         answer: sanitizeCitations(reply, sources.length),

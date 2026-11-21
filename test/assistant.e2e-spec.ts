@@ -60,6 +60,55 @@ describe('Assistant (e2e, no LLM configured)', () => {
     expect(res.body.answer).toMatch(/^Nie znalazłem tego w bazie wiedzy/);
   });
 
+  describe('follow-up with history', () => {
+    const first = 'Ile dni ma pracownik na sprzeciw od oceny okresowej?';
+    const followUp = 'a do kogo się go składa?';
+
+    it('answers the follow-up from the knowledge base with the right source', async () => {
+      const one = await ask({ question: first, assistant: 'FORMAL' }).expect(
+        200,
+      );
+      expect(one.body.grounded).toBe(true);
+      const res = await ask({
+        question: followUp,
+        assistant: 'FORMAL',
+        history: [{ question: first, answer: one.body.answer }],
+      }).expect(200);
+      expect(res.body).toMatchObject({ grounded: true, mode: 'EXTRACTIVE' });
+      expect(res.body.sources[0].ref).toMatch(/^art\. 83 ust\. 1 /);
+      expect(res.body.answer).toContain('dyrektora generalnego urzędu');
+    });
+
+    it('answers the same without history and with an empty one', async () => {
+      const body = { question: first, assistant: 'FORMAL' };
+      const plain = await ask(body).expect(200);
+      const empty = await ask({ ...body, history: [] }).expect(200);
+      expect(empty.body).toEqual(plain.body);
+    });
+
+    it('cuts long history instead of rejecting it, and validates its shape', async () => {
+      const long = 'x'.repeat(5000);
+      await ask({
+        question: followUp,
+        assistant: 'FORMAL',
+        history: Array.from({ length: 5 }, () => ({
+          question: first,
+          answer: long,
+        })),
+      }).expect(200);
+      await ask({
+        question: followUp,
+        assistant: 'FORMAL',
+        history: [{ question: first }],
+      }).expect(400);
+      await ask({
+        question: followUp,
+        assistant: 'FORMAL',
+        history: 'nope',
+      }).expect(400);
+    });
+  });
+
   it('prepares a talk for a case', async () => {
     const res = await ask({
       question: 'Pomóż przygotować rozmowę oceniającą',
