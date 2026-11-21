@@ -58,4 +58,6 @@ curl localhost:3000/api/health   # {"status":"ok"}
 ```
 
 The container listens on `0.0.0.0:$PORT` and has a Docker `HEALTHCHECK` on
-`/api/health`.
+`/api/health`. The Coolify healthcheck host is set to `127.0.0.1`, not
+`localhost`: on Alpine `localhost` resolves to `::1` first, and the app listens
+on IPv4 only.
