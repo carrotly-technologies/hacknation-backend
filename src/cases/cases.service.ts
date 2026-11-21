@@ -118,15 +118,17 @@ export class CasesService {
 
   /** GET /api/cases/:id: 404 for an unknown case, 403 for someone else's. */
   async view(id: string): Promise<CaseDetail> {
-    await this.authorize('view', this.record(id));
-    return this.detail(id);
+    const record = this.record(id);
+    await this.authorize('view', record);
+    // The link for the assessed person only for the case's evaluator, never HR.
+    return this.detail(id, isEvaluator(this.auth.requireUser(), record));
   }
 
   async patch(id: string, patch: PatchCase): Promise<CaseDetail> {
     const record = this.record(id);
     await this.authorize('edit', record);
     this.store.save(this.run(() => applyPatch(record, patch, this.today)));
-    return this.detail(id);
+    return this.detail(id, true);
   }
 
   async addObservation(
@@ -144,14 +146,14 @@ export class CasesService {
       ),
     );
     this.store.save(next);
-    return this.detail(id);
+    return this.detail(id, true);
   }
 
   async action(id: string, action: CaseAction): Promise<CaseDetail> {
     const record = this.record(id);
     await this.authorize('edit', record);
     this.store.save(this.run(() => applyAction(record, action, this.today)));
-    return this.detail(id);
+    return this.detail(id, true);
   }
 
   private authorize(ability: 'view' | 'edit', record: CaseRecord) {
@@ -163,14 +165,18 @@ export class CasesService {
     );
   }
 
-  /** Unscoped: for internal use. Routes go through view(). */
-  detail(id: string): CaseDetail {
+  /**
+   * Unscoped: for internal use. Routes go through view(). `withAckLink` only
+   * for the case's evaluator (the link is the assessed person's key).
+   */
+  detail(id: string, withAckLink = false): CaseDetail {
     const record = this.record(id);
     return toDetail(
       record,
       this.today,
       this.store.evaluator(record.evaluatorId),
       OFFICE_NAME,
+      { withAckLink },
     );
   }
 

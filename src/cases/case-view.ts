@@ -1,5 +1,6 @@
 import { analyseOsp } from '../osp/osp-analysis.rules.js';
 import { findOsp, toOspDoc } from '../osp/osp.data.js';
+import { ackLinkOf } from './ack-link.rules.js';
 import { availableActions } from './actions.rules.js';
 import { computeEvaluation, effectiveStage } from './case.rules.js';
 import type {
@@ -38,7 +39,9 @@ export function toDetail(
   today: string,
   evaluator: Evaluator,
   officeName: string,
+  { withAckLink = false }: { withAckLink?: boolean } = {},
 ): CaseDetail & { availableActions: CaseAction[] } {
+  const ackLink = withAckLink ? ackLinkOf(record) : null;
   const osp = findOsp(record.ospId);
   const { id: _id, ...evaluatorView } = evaluator;
   return {
@@ -60,6 +63,9 @@ export function toDetail(
     evaluation: computeEvaluation(record, today),
     formalCheck: formalCheck(record, today),
     signedByEvaluatorOn: record.signedByEvaluatorOn,
+    sentForAckOn: record.sentForAckOn,
+    ackLink,
+    ackLinkExpiresOn: ackLink ? record.ackTokenExpiresOn : null,
     acknowledgedOn: record.acknowledgedOn,
     objectionDeadline: objectionDeadlineOf(record, today),
     history: record.history,
