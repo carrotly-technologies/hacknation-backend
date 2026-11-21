@@ -1,0 +1,209 @@
+import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import pdfmake from 'pdfmake';
+import type {
+  Content,
+  TableCell,
+  TDocumentDefinitions,
+} from 'pdfmake/interfaces.js';
+import {
+  type Block,
+  type Cell,
+  DRAFT_HEADER,
+  type Inline,
+  type SheetContent,
+} from './sheet-content.js';
+import { toGrid } from './table-grid.js';
+
+/** Open Sans (SIL OFL 1.1, assets/fonts/OFL.txt): Polish letters in every PDF viewer. */
+export const FONTS_DIR = resolve(import.meta.dirname, '../../assets/fonts');
+
+const PAGE_WIDTH = 595.28; // A4 in points
+const MARGIN = 48;
+const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
+const HEADER_FILL = '#eeeeee';
+/** Left and right padding plus the border of a table cell, outside its width. */
+const CELL_CHROME = 9;
+
+const FONT_FILES = [
+  'OpenSans-Regular.ttf',
+  'OpenSans-SemiBold.ttf',
+  'OpenSans-Italic.ttf',
+];
+
+let configured = false;
+
+/**
+ * pdfmake's in-memory file system (not in its types, so package.json pins the
+ * exact pdfmake version; check this after an upgrade).
+ */
+interface VirtualFs {
+  writeFileSync(name: string, data: Buffer): void;
+}
+
+/**
+ * pdfmake is a module singleton: fonts are read once from assets/fonts into
+ * its virtual file system; every disk and URL access is denied, so a sheet
+ * can never pull in anything from the disk or the network.
+ */
+function configure(): void {
+  if (configured) return;
+  const vfs = (pdfmake as unknown as { virtualfs: VirtualFs }).virtualfs;
+  for (const file of FONT_FILES) {
+    vfs.writeFileSync(file, readFileSync(resolve(FONTS_DIR, file)));
+  }
+  pdfmake.setFonts({
+    OpenSans: {
+      normal: 'OpenSans-Regular.ttf',
+      bold: 'OpenSans-SemiBold.ttf',
+      italics: 'OpenSans-Italic.ttf',
+      bolditalics: 'OpenSans-SemiBold.ttf',
+    },
+  });
+  pdfmake.setUrlAccessPolicy(() => false);
+  pdfmake.setLocalAccessPolicy(() => false);
+  configured = true;
+}
+
+export async function renderSheetPdf(sheet: SheetContent): Promise<Buffer> {
+  configure();
+  const doc: TDocumentDefinitions = {
+    info: { title: sheet.title, creator: 'Kompas Kompetencji' },
+    pageSize: 'A4',
+    pageMargins: [MARGIN, 56, MARGIN, 48],
+    defaultStyle: { font: 'OpenSans', fontSize: 9, lineHeight: 1.15 },
+    header: sheet.draft
+      ? {
+          text: DRAFT_HEADER,
+          alignment: 'center',
+          bold: true,
+          color: '#b00020',
+          fontSize: 10,
+          margin: [MARGIN, 22, MARGIN, 0],
+        }
+      : undefined,
+    watermark: sheet.draft
+      ? { text: 'WERSJA ROBOCZA', opacity: 0.08, bold: true, fontSize: 60 }
+      : undefined,
+    footer: (page, pages) => ({
+      columns: [
+        { text: sheet.footnote, fontSize: 7, color: '#666666' },
+        {
+          text: `Strona ${page} z ${pages}`,
+          alignment: 'right',
+          fontSize: 7,
+          width: 70,
+        },
+      ],
+      margin: [MARGIN, 12, MARGIN, 0],
+    }),
+    content: sheet.blocks.map(toPdf),
+  };
+  return pdfmake.createPdf(doc).getBuffer();
+}
+
+function inline(content: Inline) {
+  if (typeof content === 'string') return content;
+  return content.map((run) => ({
+    text: run.text,
+    bold: run.bold,
+    italics: run.italic || run.muted,
+    color: run.muted ? '#777777' : undefined,
+    fontSize: run.muted ? 7.5 : undefined,
+  }));
+}
+
+function toPdf(block: Block): Content {
+  switch (block.kind) {
+    case 'annex':
+      return { text: block.text, alignment: 'right', fontSize: 8 };
+    case 'title':
+      return {
+        stack: block.lines.map((line, i) => ({
+          text: line,
+          bold: true,
+          fontSize: i === 0 ? 13 : 11,
+        })),
+        alignment: 'center',
+        margin: [0, 8, 0, 8],
+      };
+    case 'part':
+      return {
+        text: block.text,
+        bold: true,
+        fontSize: 11,
+        alignment: 'center',
+        characterSpacing: 3,
+        margin: [0, 6, 0, 6],
+      };
+    case 'heading':
+      return { text: block.text, bold: true, margin: [0, 10, 0, 4] };
+    case 'paragraph':
+      return {
+        text: inline(block.content),
+        italics: block.italic,
+        alignment: block.align ?? 'left',
+        fontSize: block.small ? 7.5 : undefined,
+        margin: [0, 2, 0, 2],
+      };
+    case 'textBox':
+      return {
+        table: {
+          widths: [CONTENT_WIDTH - CELL_CHROME],
+          body: [[{ text: block.text || ' ', margin: [2, 4, 2, 4] }]],
+        },
+        margin: [0, 0, 0, 6],
+      };
+    case 'table':
+      return {
+        table: {
+          // The caption row stays with the next one (when it spans no rows); rows never split.
+          ...(block.rows[0].some((cell) => (cell.rowSpan ?? 1) > 1)
+            ? {}
+            : { headerRows: 1, keepWithHeaderRows: 1 }),
+          dontBreakRows: true,
+          widths: block.widths.map((w) => w * CONTENT_WIDTH - CELL_CHROME),
+          body: toGrid(block.rows).map((row) => row.map(toPdfCell)),
+        },
+        margin: [0, 4, 0, 8],
+      };
+    case 'signatures':
+      return {
+        columns: block.cells.map((cell) => ({
+          stack: [
+            { text: cell.value || ' ', alignment: 'center' },
+            {
+              canvas: [
+                { type: 'line', x1: 0, y1: 2, x2: 110, y2: 2, lineWidth: 0.5 },
+              ],
+              alignment: 'center',
+            },
+            {
+              text: cell.caption,
+              italics: true,
+              fontSize: 7,
+              alignment: 'center',
+            },
+          ],
+        })),
+        columnGap: 10,
+        margin: [0, 10, 0, 10],
+        unbreakable: true,
+      };
+    case 'pageBreak':
+      return { text: '', pageBreak: 'after' };
+  }
+}
+
+function toPdfCell(cell: Cell | null): TableCell {
+  if (!cell) return {};
+  return {
+    text: inline(cell.content),
+    colSpan: cell.colSpan,
+    rowSpan: cell.rowSpan,
+    bold: cell.header,
+    fillColor: cell.header ? HEADER_FILL : undefined,
+    alignment: cell.align,
+    fontSize: cell.small ? 7.5 : undefined,
+  };
+}

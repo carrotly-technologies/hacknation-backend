@@ -18,6 +18,11 @@ import {
  */
 
 export const OFFICE_NAME = 'Ministerstwo Cyfryzacji (dane demonstracyjne)';
+/**
+ * Demo "miejscowość" printed next to signature dates in the downloaded sheet
+ * (PDF/DOCX). Overridden by the OFFICE_PLACE env variable.
+ */
+export const DEMO_OFFICE_PLACE = 'Warszawa';
 export const SUPERVISOR_ID = 'ev-kaminska';
 const TEAM_UNIT = 'Wydział Analiz i Koordynacji, Departament Spraw Cyfrowych';
 
