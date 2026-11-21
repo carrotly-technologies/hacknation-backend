@@ -35,7 +35,8 @@ export interface TodoItem {
 }
 
 const TODO_TEXT: Partial<Record<StageId, string>> = {
-  OSP_ANALYSIS: 'przeanalizuj opis stanowiska i wybierz arkusz',
+  OSP_ANALYSIS: 'przeanalizuj opis stanowiska',
+  SHEET_PROPOSAL: 'zaakceptuj proponowany formularz oceny',
   OPENING_TALK: 'przeprowadź rozmowę rozpoczynającą (część I)',
   OBSERVATION: 'zaplanuj rozmowę oceniającą przed terminem oceny',
   ASSESSMENT: 'przeprowadź rozmowę oceniającą i oceń kryteria',

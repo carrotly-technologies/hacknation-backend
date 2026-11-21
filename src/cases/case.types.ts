@@ -7,6 +7,9 @@ export type Path = 'PERIODIC' | 'FIRST';
 
 export const PERIODIC_STAGES = [
   'OSP_ANALYSIS',
+  // "Wstępny formularz": the evaluator reviews the proposed sheet and its
+  // criteria before the opening talk.
+  'SHEET_PROPOSAL',
   'OPENING_TALK',
   'OBSERVATION',
   'ASSESSMENT',
@@ -223,6 +226,7 @@ export interface CaseRecord {
 
 export type CaseAction =
   | 'ACCEPT_OSP_ANALYSIS'
+  | 'ACCEPT_SHEET'
   | 'CONFIRM_PART_I'
   | 'EMPLOYEE_ACK_PART_I'
   | 'START_ASSESSMENT'
@@ -234,6 +238,7 @@ export type CaseAction =
 
 export const CASE_ACTIONS: readonly CaseAction[] = [
   'ACCEPT_OSP_ANALYSIS',
+  'ACCEPT_SHEET',
   'CONFIRM_PART_I',
   'EMPLOYEE_ACK_PART_I',
   'START_ASSESSMENT',

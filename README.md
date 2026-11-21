@@ -139,6 +139,9 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 - PATCH merges one level deep (ratings per indicator); `null` in `decisions` / `deviationNotes` removes a key.
 - 409 body: `{ statusCode, error, message }` (+ `formalCheck` with the failing items for `SIGN_ASSESSMENT`).
 - `CaseDetail` also carries `availableActions` (actions legal right now), an addition to the contract.
+- Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` („Wstępny formularz”: the evaluator reviews the proposed sheet and
+  criteria, may change them with PATCH, then `ACCEPT_SHEET`) → `OPENING_TALK` → … `ACCEPT_OSP_ANALYSIS` now moves the
+  case to `SHEET_PROPOSAL`; cases already past it report its `completedOn` as the OSP analysis date.
 
 The competency data in `src/competency-model/data/model.data.ts` is generated from `notatki/model-kompetencji.json`
 by `node scripts/generate-model-data.mjs` (then run prettier on it). Don't edit it by hand.

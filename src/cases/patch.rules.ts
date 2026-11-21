@@ -56,6 +56,7 @@ export function applyPatch(
   const partIOpen =
     record.path === 'PERIODIC' &&
     (stage === 'OSP_ANALYSIS' ||
+      stage === 'SHEET_PROPOSAL' ||
       (stage === 'OPENING_TALK' && !record.partI.confirmedByEvaluatorOn));
 
   if (patch.sheetId !== undefined && patch.sheetId !== record.sheetId) {

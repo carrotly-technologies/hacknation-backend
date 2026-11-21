@@ -48,13 +48,18 @@ describe('periodic state machine', () => {
 
     r = run(r, 'ACCEPT_OSP_ANALYSIS');
     expect(r.sheetId).toBe('C'); // from "brak podległych pracowników"
-    expect(effectiveStage(r)).toBe('OPENING_TALK');
+    expect(effectiveStage(r)).toBe('SHEET_PROPOSAL');
+    expect(availableActions(r, TODAY)).toEqual(['ACCEPT_SHEET']);
 
+    // "Wprowadź zmiany": the sheet and criteria stay editable until accepted.
     r = applyPatch(
       r,
       { partI: { additionalCriteria: ['myslenie_analityczne'] } },
       TODAY,
     );
+    r = run(r, 'ACCEPT_SHEET');
+    expect(effectiveStage(r)).toBe('OPENING_TALK');
+    expect(r.completedOn.SHEET_PROPOSAL).toBe(TODAY);
     r = run(r, 'CONFIRM_PART_I');
     expect(r.partI.confirmedByEvaluatorOn).toBe(TODAY);
     expect(r.partI.assessmentDue).toBe('2028-11-21'); // +24 months
@@ -99,11 +104,17 @@ describe('periodic state machine', () => {
       'DONE',
       'DONE',
       'DONE',
+      'DONE',
       'CURRENT',
       'UPCOMING',
       'LOCKED',
     ]);
-    expect(stages[3].deadline).toMatchObject({
+    // Seeded before the stage existed: falls back to the OSP analysis date.
+    expect(stages[1]).toMatchObject({
+      id: 'SHEET_PROPOSAL',
+      completedOn: stages[0].completedOn,
+    });
+    expect(stages[4].deadline).toMatchObject({
       date: '2026-12-04',
       state: 'SOON',
     });
@@ -113,6 +124,9 @@ describe('periodic state machine', () => {
 describe('illegal transitions', () => {
   it.each<[string, CaseAction, string]>([
     ['c-002', 'CONFIRM_PART_I', 'analizę opisu stanowiska'],
+    ['c-002', 'ACCEPT_SHEET', 'Najpierw zatwierdź analizę'],
+    ['c-001', 'ACCEPT_SHEET', 'już zaakceptowany'],
+    ['c-004', 'ACCEPT_SHEET', 'tylko oceny okresowej'],
     ['c-002', 'SIGN_ASSESSMENT', 'dopiero po rozmowie oceniającej'],
     ['c-001', 'CONFIRM_PART_I', 'już zatwierdzona'],
     ['c-001', 'EMPLOYEE_ACK_ASSESSMENT', 'po jej zatwierdzeniu'],

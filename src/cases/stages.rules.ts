@@ -29,6 +29,7 @@ import {
 
 export const STAGE_LEGAL_BASIS: Record<StageId, string> = {
   OSP_ANALYSIS: `§3 i §5 ust. 1 pkt 1, ust. 2 ${RO_2016}`,
+  SHEET_PROPOSAL: `§3 ust. 3–4, §2 ust. 2 i §5 ust. 2 ${RO_2016}`,
   OPENING_TALK: `§5–§7 ${RO_2016}`,
   OBSERVATION: `art. 81 ust. 1 ${USC}; §5 ust. 3 ${RO_2016}`,
   ASSESSMENT: `§10, §11 ust. 1 pkt 1–4 ${RO_2016}`,
@@ -56,6 +57,12 @@ function stageDeadlineSpec(
       return {
         ...openingTalkDeadline(record.cycleStart),
         label: 'Analiza OSP przed rozmową rozpoczynającą, najpóźniej do',
+      };
+    case 'SHEET_PROPOSAL':
+      return {
+        ...openingTalkDeadline(record.cycleStart),
+        label:
+          'Akceptacja formularza przed rozmową rozpoczynającą, najpóźniej do',
       };
     case 'OPENING_TALK':
       return openingTalkDeadline(record.cycleStart);
@@ -139,6 +146,18 @@ export function caseStatus(record: CaseRecord, today: string): CaseStatus {
   return 'W_TOKU';
 }
 
+/**
+ * Date a stage was completed. Cases accepted before SHEET_PROPOSAL existed
+ * chose the sheet together with the OSP analysis, so that date stands in.
+ */
+function completedOnOf(record: CaseRecord, id: StageId): string | null {
+  const date = record.completedOn[id];
+  if (date) return date;
+  return id === 'SHEET_PROPOSAL'
+    ? (record.completedOn.OSP_ANALYSIS ?? null)
+    : null;
+}
+
 export function buildStages(record: CaseRecord, today: string): StageInfo[] {
   const order = stageOrder(record);
   const current = order.indexOf(effectiveStage(record));
@@ -157,7 +176,7 @@ export function buildStages(record: CaseRecord, today: string): StageInfo[] {
       name: STAGE_NAMES[id],
       status,
       deadline: status === 'DONE' ? null : stageDeadline(record, id, today),
-      completedOn: status === 'DONE' ? (record.completedOn[id] ?? null) : null,
+      completedOn: status === 'DONE' ? completedOnOf(record, id) : null,
       legalBasis: STAGE_LEGAL_BASIS[id],
     };
   });

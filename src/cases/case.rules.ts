@@ -108,6 +108,7 @@ export function effectiveStage(record: CaseRecord): StageId {
 
 export const STAGE_NAMES: Record<StageId, string> = {
   OSP_ANALYSIS: 'Analiza opisu stanowiska',
+  SHEET_PROPOSAL: 'Wstępny formularz',
   OPENING_TALK: 'Rozmowa rozpoczynająca · część I',
   OBSERVATION: 'Okres oceny · obserwacje',
   ASSESSMENT: 'Rozmowa oceniająca i ocena · część II',

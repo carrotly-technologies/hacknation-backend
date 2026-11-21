@@ -13,6 +13,8 @@ const criterionName = (id: string) => competency(id)?.name.toLowerCase() ?? id;
 export const STAGE_RULE_QUERY: Record<StageId, string> = {
   OSP_ANALYSIS:
     'wybór arkusza oceny i kryteriów dodatkowych na podstawie opisu stanowiska',
+  SHEET_PROPOSAL:
+    'wybór arkusza oceny A B C i kryteriów dodatkowych najwyżej 3',
   OPENING_TALK: 'co omawia się na rozmowie rozpoczynającej proces oceny',
   OBSERVATION:
     'proces oceniania obserwacja pracownika udzielanie informacji zwrotnej',
@@ -165,6 +167,11 @@ export const STAGE_SUGGESTIONS: Record<StageId | 'GENERAL', string[]> = {
     'Kiedy używa się arkusza A, B, a kiedy C?',
     'Ile kryteriów dodatkowych można wybrać i skąd?',
     'Kierownik zespołu bez tytułu naczelnika – który arkusz?',
+  ],
+  SHEET_PROPOSAL: [
+    'Kiedy używa się arkusza A, B, a kiedy C?',
+    'Ile kryteriów dodatkowych można wybrać i skąd?',
+    'Czy można zmienić arkusz po rozmowie rozpoczynającej?',
   ],
   OPENING_TALK: [
     'Co omawia się na rozmowie rozpoczynającej?',

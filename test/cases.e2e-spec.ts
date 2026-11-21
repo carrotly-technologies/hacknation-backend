@@ -102,8 +102,16 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     const accepted = await act('c-002', 'ACCEPT_OSP_ANALYSIS').expect(200);
     expect(accepted.body).toMatchObject({
       sheetId: 'C',
-      currentStage: 'OPENING_TALK',
+      currentStage: 'SHEET_PROPOSAL',
+      availableActions: ['ACCEPT_SHEET'],
     });
+    const sheetAccepted = await act('c-002', 'ACCEPT_SHEET').expect(200);
+    expect(sheetAccepted.body.currentStage).toBe('OPENING_TALK');
+    expect(
+      sheetAccepted.body.stages.find(
+        (s: { id: string }) => s.id === 'SHEET_PROPOSAL',
+      ),
+    ).toMatchObject({ name: 'Wstępny formularz', status: 'DONE' });
   });
 
   it('rates, decides and signs the main case', async () => {
