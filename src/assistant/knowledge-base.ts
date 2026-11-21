@@ -1,6 +1,7 @@
 import { Bm25Index } from './bm25.js';
 import { KNOWLEDGE_CHUNKS } from './data/knowledge.data.js';
 import type { KnowledgeChunk, KnowledgeDocId } from './knowledge.types.js';
+import { expandQuery } from './query-expansion.rules.js';
 
 const MAX_PER_UNIT = 2;
 
@@ -53,7 +54,8 @@ export class KnowledgeBase {
 
   /** Q&A entries whose question (not answer) matches the query. */
   searchQaQuestions(query: string, k = 1): SearchHit[] {
-    return this.qaIndex.search(query, k).map((hit) => ({
+    const expansions = expandQuery(query);
+    return this.qaIndex.search(query, k, undefined, expansions).map((hit) => ({
       chunk: this.qaChunks[hit.index],
       score: hit.score,
       coverage: hit.coverage,
@@ -62,10 +64,15 @@ export class KnowledgeBase {
 
   search(query: string, options: SearchOptions = {}): SearchHit[] {
     const { k = 5, exclude = [], only } = options;
-    const hits = this.index.search(query, k * 6, (i) => {
-      const doc = this.chunks[i].doc;
-      return !exclude.includes(doc) && (!only || only.includes(doc));
-    });
+    const hits = this.index.search(
+      query,
+      k * 6,
+      (i) => {
+        const doc = this.chunks[i].doc;
+        return !exclude.includes(doc) && (!only || only.includes(doc));
+      },
+      expandQuery(query),
+    );
     // Diversify: at most MAX_PER_UNIT excerpts of one article/§/page, so that
     // the ust. of one article do not crowd out every other source.
     const perUnit = new Map<string, number>();
