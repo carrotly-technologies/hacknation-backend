@@ -94,12 +94,15 @@ export function computeEvaluation(
 
 /**
  * The current stage. The store keeps ASSESSMENT / FIRST_ASSESSMENT for the
- * whole part II; once every criterion is decided, the case is in
- * JUSTIFICATION / FIRST_CONDITIONS.
+ * whole part II. Periodic: once every criterion is decided, the case is at
+ * ASSESSMENT_TALK (etap III Poradnika, §10 rozp. 2016), and after the talk
+ * was recorded at JUSTIFICATION (etap IV, „Weryfikacja formularza”, §11).
+ * First assessment: FIRST_CONDITIONS once every element is decided.
  */
 export function effectiveStage(record: CaseRecord): StageId {
-  if (record.stage === 'ASSESSMENT' && allDecided(record))
-    return 'JUSTIFICATION';
+  if (record.stage === 'ASSESSMENT' && allDecided(record)) {
+    return record.assessmentTalkOn ? 'JUSTIFICATION' : 'ASSESSMENT_TALK';
+  }
   if (record.stage === 'FIRST_ASSESSMENT' && allDecided(record)) {
     return 'FIRST_CONDITIONS';
   }
@@ -112,7 +115,8 @@ export const STAGE_NAMES: Record<StageId, string> = {
   OPENING_TALK: 'Rozmowa rozpoczynająca · część I',
   OBSERVATION: 'Okres oceny · obserwacje',
   ASSESSMENT: 'Formularz oceny kompetencji',
-  JUSTIFICATION: 'Uzasadnienie i plan rozwoju (IPRZ)',
+  ASSESSMENT_TALK: 'Rozmowa oceniająca',
+  JUSTIFICATION: 'Weryfikacja formularza',
   DOCUMENT: 'Dokument i zapoznanie',
   INTRO_TALK: 'Rozmowa wstępna',
   REPORT: 'Sprawozdanie pracownika',

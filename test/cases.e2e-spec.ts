@@ -32,8 +32,10 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
 
   const http = () => withToken(app, supervisor);
   const asHr = () => withToken(app, hr);
-  const act = (id: string, action: string) =>
-    http().post(`/api/cases/${id}/actions`).send({ action });
+  const act = (id: string, action: string, extra: object = {}) =>
+    http()
+      .post(`/api/cases/${id}/actions`)
+      .send({ action, ...extra });
 
   it('GET /api/me returns the signed-in supervisor', async () => {
     const res = await http().get('/api/me').expect(200);
@@ -48,7 +50,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     });
   });
 
-  it('GET /api/team returns the 6 team cases and todo sorted by date', async () => {
+  it('GET /api/team returns the 7 team cases and todo sorted by date', async () => {
     const res = await http().get('/api/team').expect(200);
     expect(res.body.cases.map((c: { id: string }) => c.id)).toEqual([
       'c-001',
@@ -57,6 +59,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       'c-004',
       'c-005',
       'c-006',
+      'c-007',
     ]);
     const dates = res.body.todo.map(
       (t: { deadline: { date: string } }) => t.deadline.date,
@@ -134,20 +137,36 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       'komunikacja.2': null,
     });
 
-    // signing too early: 409 with the failing checks
+    // signing too early: 409, the form is not complete
     res = await act('c-001', 'SIGN_ASSESSMENT').expect(409);
-    expect(res.body.message).toContain('kontrola formalna');
-    expect(res.body.formalCheck.length).toBeGreaterThan(0);
+    expect(res.body.message).toContain('Weryfikacja formularza');
 
     res = await http()
       .patch('/api/cases/c-001')
       .send({ decisions })
       .expect(200);
-    expect(res.body.currentStage).toBe('JUSTIFICATION');
+    expect(res.body.currentStage).toBe('ASSESSMENT_TALK');
     expect(res.body.evaluation).toMatchObject({
       result: 'POSITIVE',
       averageDisplay: '6,33',
     });
+    expect(res.body.assessmentTalkTopics).toHaveLength(3);
+
+    // §10: no signature before the assessment talk
+    res = await act('c-001', 'SIGN_ASSESSMENT').expect(409);
+    expect(res.body.message).toContain('Najpierw odnotuj rozmowę oceniającą');
+    res = await act('c-001', 'RECORD_ASSESSMENT_TALK', {
+      date: '2026-11-20',
+    }).expect(200);
+    expect(res.body).toMatchObject({
+      currentStage: 'JUSTIFICATION',
+      assessmentTalkOn: '2026-11-20',
+    });
+
+    // signing with failing checks: 409 with the list
+    res = await act('c-001', 'SIGN_ASSESSMENT').expect(409);
+    expect(res.body.message).toContain('kontrola formalna');
+    expect(res.body.formalCheck.length).toBeGreaterThan(0);
 
     await http()
       .patch('/api/cases/c-001')
@@ -181,6 +200,54 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     });
   });
 
+  it('RECORD_ASSESSMENT_TALK: today by default, 400 for a future or invalid date', async () => {
+    const detail = await http().get('/api/cases/c-007').expect(200);
+    expect(detail.body).toMatchObject({
+      currentStage: 'ASSESSMENT_TALK',
+      assessmentTalkOn: null,
+      availableActions: ['RECORD_ASSESSMENT_TALK'],
+      assessmentTalkTopics: [
+        { id: 'DUTIES', legalBasis: '§10 pkt 1 rozp. PRM z 4.04.2016' },
+        { id: 'GOALS', legalBasis: '§10 pkt 2 rozp. PRM z 4.04.2016' },
+        { id: 'DEVELOPMENT', legalBasis: '§10 pkt 3 rozp. PRM z 4.04.2016' },
+      ],
+    });
+    expect(
+      detail.body.stages.map((s: { name: string }) => s.name).slice(4, 7),
+    ).toEqual([
+      'Formularz oceny kompetencji',
+      'Rozmowa oceniająca',
+      'Weryfikacja formularza',
+    ]);
+
+    let res = await act('c-007', 'RECORD_ASSESSMENT_TALK', {
+      date: '2026-11-22',
+    }).expect(400);
+    expect(JSON.stringify(res.body.message)).toContain('z przyszłości');
+    await act('c-007', 'RECORD_ASSESSMENT_TALK', { date: '21.11.2026' }).expect(
+      400,
+    );
+    res = await act('c-007', 'SIGN_ASSESSMENT').expect(409);
+    expect(res.body.message).toContain('§10');
+
+    res = await act('c-007', 'RECORD_ASSESSMENT_TALK').expect(200);
+    expect(res.body).toMatchObject({
+      currentStage: 'JUSTIFICATION',
+      assessmentTalkOn: '2026-11-21',
+    });
+    expect(
+      res.body.formalCheck.find(
+        (f: { id: string }) => f.id === 'ASSESSMENT_TALK_HELD',
+      ),
+    ).toMatchObject({ ok: true });
+    // Corrections after the talk are still saved (§11 ust. 2).
+    await http()
+      .patch('/api/cases/c-007')
+      .send({ decisions: { komunikacja: 5 }, iprz: 'Plan po rozmowie.' })
+      .expect(200);
+    await act('c-007', 'RECORD_ASSESSMENT_TALK').expect(409);
+  });
+
   it('part II is a draft before the assessment talk, saved until signing', async () => {
     for (const id of ['c-003', 'c-005']) {
       await http()
@@ -203,7 +270,9 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       expect(res.body.availableActions).not.toContain('SIGN_ASSESSMENT');
     }
     const res = await act('c-003', 'SIGN_ASSESSMENT').expect(409);
-    expect(res.body.message).toContain('dopiero w otwartym formularzu oceny kompetencji');
+    expect(res.body.message).toContain(
+      'dopiero w otwartym formularzu oceny kompetencji',
+    );
   });
 
   it('PATCH validates values (400) and stage locks (409)', async () => {
@@ -297,6 +366,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
         .expect(400);
       expect(JSON.stringify(res.body.message)).toContain('4000');
 
+      await act('c-001', 'RECORD_ASSESSMENT_TALK').expect(200);
       await act('c-001', 'SIGN_ASSESSMENT').expect(200);
       res = await http()
         .patch('/api/cases/c-001')
@@ -398,13 +468,13 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
   it('HR overview counts and simulated reminders', async () => {
     let res = await asHr().get('/api/hr/overview').expect(200);
     expect(res.body.counters).toEqual({
-      inProgress: 8,
+      inProgress: 9,
       dueSoon: 5,
       overdue: 2,
       awaitingAck: 1,
       objectionPeriod: 1,
     });
-    expect(res.body.cases).toHaveLength(10);
+    expect(res.body.cases).toHaveLength(11);
     expect(res.body.cases[0]).toMatchObject({
       evaluatorName: 'Joanna Kamińska',
       lastReminderOn: null,

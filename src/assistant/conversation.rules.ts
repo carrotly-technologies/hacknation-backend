@@ -18,7 +18,9 @@ export const STAGE_RULE_QUERY: Record<StageId, string> = {
   OPENING_TALK: 'co omawia się na rozmowie rozpoczynającej proces oceny',
   OBSERVATION:
     'proces oceniania obserwacja pracownika udzielanie informacji zwrotnej',
-  ASSESSMENT: 'rozmowa oceniająca co omawia się kierunki rozwoju',
+  ASSESSMENT:
+    'skala ocen cząstkowych ogólny poziom spełniania kryteriów oceny średnia',
+  ASSESSMENT_TALK: 'rozmowa oceniająca co omawia się kierunki rozwoju',
   JUSTIFICATION: 'uzasadnienie ocen cząstkowych wnioski do IPRZ',
   DOCUMENT: 'zapoznanie ocenianego z oceną sprzeciw 7 dni',
   INTRO_TALK: 'rozmowa wstępna pierwsza ocena 21 dni',
@@ -184,9 +186,14 @@ export const STAGE_SUGGESTIONS: Record<StageId | 'GENERAL', string[]> = {
     'Kiedy oceniający może zmienić termin oceny?',
   ],
   ASSESSMENT: [
-    'Co omawia się na rozmowie oceniającej?',
     'Jaka jest skala ocen cząstkowych w ocenie okresowej?',
     'Jak ze średniej wyznacza się ogólny poziom spełniania kryteriów?',
+    'Kiedy przeprowadza się rozmowę oceniającą?',
+  ],
+  ASSESSMENT_TALK: [
+    'Co omawia się na rozmowie oceniającej?',
+    'Jakie pytania zadać ocenianemu na rozmowie oceniającej?',
+    'Jak uporządkować argumenty uzasadniające ocenę?',
   ],
   JUSTIFICATION: [
     'Kiedy trzeba uzasadnić ocenę cząstkową?',

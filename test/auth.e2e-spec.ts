@@ -136,6 +136,7 @@ describe('Authentication, roles and permissions (e2e)', () => {
         'c-004',
         'c-005',
         'c-006',
+        'c-007',
       ]);
       const theirs = await as(sikora).get('/api/cases').expect(200);
       expect(theirs.body.map((c: { id: string }) => c.id)).toEqual([
@@ -189,7 +190,7 @@ describe('Authentication, roles and permissions (e2e)', () => {
     it('sees the HR panel and every case', async () => {
       await as(hr).get('/api/hr/overview').expect(200);
       const all = await as(hr).get('/api/cases').expect(200);
-      expect(all.body).toHaveLength(10);
+      expect(all.body).toHaveLength(11);
       const detail = await as(hr).get('/api/cases/c-001').expect(200);
       expect(detail.body.status).toBe('W_TOKU');
     });

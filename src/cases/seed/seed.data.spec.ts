@@ -40,13 +40,22 @@ describe('demo seed', () => {
   });
 
   it('cases later in the process keep the part I entered earlier', () => {
-    for (const id of ['c-001', 'c-003', 'c-006']) {
+    for (const id of ['c-001', 'c-003', 'c-006', 'c-007']) {
       const c = seed.find((x) => x.id === id)!;
       expect(c.partI.additionalCriteria.length).toBeGreaterThan(0);
       expect(c.partI.confirmedByEvaluatorOn).not.toBeNull();
       expect(c.partI.topics.duties).not.toBe('');
       expect(Object.keys(c.partI.expectations).length).toBeGreaterThan(0);
       expect(c.partI.assessmentDue).not.toBeNull();
+    }
+  });
+
+  it('signed cases have the assessment talk date, before the signature', () => {
+    const signed = seed.filter((c) => c.signedByEvaluatorOn);
+    expect(signed.length).toBeGreaterThan(0);
+    for (const c of signed.filter((x) => x.path === 'PERIODIC')) {
+      expect(c.assessmentTalkOn).not.toBeNull();
+      expect(c.assessmentTalkOn! <= c.signedByEvaluatorOn!).toBe(true);
     }
   });
 });

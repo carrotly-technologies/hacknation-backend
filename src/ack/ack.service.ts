@@ -64,6 +64,7 @@ export class AckService {
         previousAssessment: detail.previousAssessment,
         promotionRequest: detail.promotionRequest,
         firstConditions: detail.firstConditions,
+        assessmentTalkOn: detail.assessmentTalkOn,
         signedByEvaluatorOn: detail.signedByEvaluatorOn,
         acknowledgedOn: null,
       },

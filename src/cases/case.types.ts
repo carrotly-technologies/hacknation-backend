@@ -13,6 +13,9 @@ export const PERIODIC_STAGES = [
   'OPENING_TALK',
   'OBSERVATION',
   'ASSESSMENT',
+  // Etap III Poradnika (Tabela nr 1): rozmowa oceniająca, §10 rozp. 2016.
+  'ASSESSMENT_TALK',
+  // Etap IV: sporządzenie oceny na piśmie po rozmowie, §11 rozp. 2016.
   'JUSTIFICATION',
   'DOCUMENT',
 ] as const;
@@ -179,6 +182,16 @@ export interface FormalCheckItem {
   legalBasis: string | null;
 }
 
+/** One of the topics of the assessment talk (§10 pkt 1–3 rozp. 2016). */
+export interface AssessmentTalkTopic {
+  id: 'DUTIES' | 'GOALS' | 'DEVELOPMENT';
+  /** Short wording for the checklist. */
+  label: string;
+  /** The point of §10 word for word. */
+  quote: string;
+  legalBasis: string;
+}
+
 export interface HistoryEntry {
   date: string;
   text: string;
@@ -199,6 +212,10 @@ export interface CaseDetail extends CaseSummary {
   previousAssessment: PreviousAssessment | null;
   promotionRequest: PromotionRequest;
   firstConditions: FirstConditions | null;
+  /** Date of the assessment talk (§10 rozp. 2016); null until recorded. */
+  assessmentTalkOn: string | null;
+  /** What the assessment talk covers (§10); empty for the first assessment. */
+  assessmentTalkTopics: AssessmentTalkTopic[];
   evaluation: EvaluateResult | null;
   formalCheck: FormalCheckItem[];
   signedByEvaluatorOn: string | null;
@@ -226,13 +243,14 @@ export type CycleStart =
   | { kind: 'PREVIOUS_NEGATIVE'; assessedOn: string; acknowledgedOn: string };
 
 /**
- * Stored stages. ASSESSMENT also covers JUSTIFICATION, and FIRST_ASSESSMENT
- * covers FIRST_CONDITIONS: which one is current is derived from whether every
- * criterion has a decision.
+ * Stored stages. ASSESSMENT also covers ASSESSMENT_TALK and JUSTIFICATION,
+ * and FIRST_ASSESSMENT covers FIRST_CONDITIONS: which one is current is
+ * derived from whether every criterion has a decision and whether the
+ * assessment talk was recorded (`effectiveStage`).
  */
 export type StoredStage = Exclude<
   StageId,
-  'JUSTIFICATION' | 'FIRST_CONDITIONS'
+  'ASSESSMENT_TALK' | 'JUSTIFICATION' | 'FIRST_CONDITIONS'
 >;
 
 /** What the in-memory store keeps; everything else is derived on read. */
@@ -256,6 +274,8 @@ export interface CaseRecord {
   previousAssessment: PreviousAssessment | null;
   promotionRequest: PromotionRequest;
   firstConditions: FirstConditions | null;
+  /** Set by RECORD_ASSESSMENT_TALK. */
+  assessmentTalkOn: string | null;
   signedByEvaluatorOn: string | null;
   sentForAckOn: string | null;
   /** Secret of the link for the assessed person (ack-link.rules.ts). */
@@ -272,6 +292,7 @@ export type CaseAction =
   | 'CONFIRM_PART_I'
   | 'EMPLOYEE_ACK_PART_I'
   | 'START_ASSESSMENT'
+  | 'RECORD_ASSESSMENT_TALK'
   | 'SIGN_ASSESSMENT'
   | 'SEND_FOR_ACK'
   | 'EMPLOYEE_ACK_ASSESSMENT'
@@ -284,6 +305,7 @@ export const CASE_ACTIONS: readonly CaseAction[] = [
   'CONFIRM_PART_I',
   'EMPLOYEE_ACK_PART_I',
   'START_ASSESSMENT',
+  'RECORD_ASSESSMENT_TALK',
   'SIGN_ASSESSMENT',
   'SEND_FOR_ACK',
   'EMPLOYEE_ACK_ASSESSMENT',
