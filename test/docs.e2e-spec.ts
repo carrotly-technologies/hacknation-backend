@@ -3,11 +3,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { asUser } from './auth.helpers.js';
+import { loginAs, withToken } from './auth.helpers.js';
 
 describe('Source documents (e2e)', () => {
   let app: INestApplication<App>;
-  let user: string;
+  let token: string;
 
   beforeAll(async () => {
     delete process.env.LLM_BASE_URL;
@@ -18,14 +18,14 @@ describe('Source documents (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    user = 'u-kaminska';
+    token = await loginAs(app, 'j.kaminska');
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  const get = (path: string) => asUser(app, user).get(path);
+  const get = (path: string) => withToken(app, token).get(path);
 
   it('serves a PDF from docs/', async () => {
     const res = await get(
@@ -92,7 +92,7 @@ describe('Source documents (e2e)', () => {
   });
 
   it('links each source of an answer, PDFs on their page', async () => {
-    const res = await asUser(app, user)
+    const res = await withToken(app, token)
       .post('/api/assistant/ask')
       .send({
         question:

@@ -3,11 +3,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { asUser } from './auth.helpers.js';
+import { loginAs, withToken } from './auth.helpers.js';
 
 describe('Assistant (e2e, no LLM configured)', () => {
   let app: INestApplication<App>;
-  let user: string;
+  let token: string;
 
   beforeAll(async () => {
     delete process.env.LLM_BASE_URL;
@@ -18,7 +18,7 @@ describe('Assistant (e2e, no LLM configured)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    user = 'u-kaminska';
+    token = await loginAs(app, 'j.kaminska');
   });
 
   afterAll(async () => {
@@ -26,7 +26,7 @@ describe('Assistant (e2e, no LLM configured)', () => {
   });
 
   const ask = (body: object) =>
-    asUser(app, user).post('/api/assistant/ask').send(body);
+    withToken(app, token).post('/api/assistant/ask').send(body);
 
   it('answers a rule question extractively with sources', async () => {
     const res = await ask({
@@ -82,14 +82,14 @@ describe('Assistant (e2e, no LLM configured)', () => {
   });
 
   it('GET /api/assistant/suggestions returns questions per stage', async () => {
-    const res = await asUser(app, user)
+    const res = await withToken(app, token)
       .get('/api/assistant/suggestions?stageId=FIRST_CONDITIONS')
       .expect(200);
     expect(res.body).toEqual(
       expect.arrayContaining([expect.stringMatching(/pierwszej oceny/)]),
     );
-    await asUser(app, user).get('/api/assistant/suggestions').expect(200);
-    await asUser(app, user)
+    await withToken(app, token).get('/api/assistant/suggestions').expect(200);
+    await withToken(app, token)
       .get('/api/assistant/suggestions?stageId=NOPE')
       .expect(400);
   });

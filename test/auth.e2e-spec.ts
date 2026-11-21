@@ -4,14 +4,14 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { asUser } from './auth.helpers.js';
+import { loginAs, withToken } from './auth.helpers.js';
 
-describe('Demo account switching, roles and permissions (e2e)', () => {
+describe('Authentication, roles and permissions (e2e)', () => {
   let app: INestApplication<App>;
-  const kaminska = 'u-kaminska';
-  const sikora = 'u-sikora';
-  const hr = 'u-lis';
-  const admin = 'u-admin';
+  let kaminska: string;
+  let sikora: string;
+  let hr: string;
+  let admin: string;
 
   beforeAll(async () => {
     process.env.DEMO_TODAY = '2026-11-21';
@@ -21,6 +21,9 @@ describe('Demo account switching, roles and permissions (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
+    [kaminska, sikora, hr, admin] = await Promise.all(
+      ['j.kaminska', 'r.sikora', 'a.lis', 'admin'].map((l) => loginAs(app, l)),
+    );
   });
 
   afterAll(async () => {
@@ -28,7 +31,7 @@ describe('Demo account switching, roles and permissions (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await as(kaminska).post('/api/demo/reset').expect(200);
+    await withToken(app, kaminska).post('/api/demo/reset').expect(200);
   });
 
   const OBSERVATION = {
@@ -41,85 +44,84 @@ describe('Demo account switching, roles and permissions (e2e)', () => {
     result: '',
   };
   const anon = () => request(app.getHttpServer());
-  const as = (userId: string) => asUser(app, userId);
-  const ids = (body: { id: string }[]) => body.map((c) => c.id);
-  const KAMINSKA_CASES = ['c-001', 'c-002', 'c-003', 'c-004', 'c-005', 'c-006'];
+  const as = (token: string) => withToken(app, token);
 
-  describe('no sign-in', () => {
-    it('has no login or logout route', async () => {
-      await anon()
+  describe('sign-in', () => {
+    it('returns an 8 h bearer token and the user', async () => {
+      const res = await anon()
         .post('/api/auth/login')
-        .send({ login: 'j.kaminska', password: 'Kompas2026!' })
-        .expect(404);
-      await anon().post('/api/auth/logout').expect(404);
-    });
-
-    it('acts as j.kaminska (SUPERVISOR) without X-User-Id', async () => {
-      const me = await anon().get('/api/me').expect(200);
-      expect(me.body).toMatchObject({
-        id: 'u-kaminska',
-        role: 'SUPERVISOR',
-        name: 'Joanna Kamińska',
-      });
-      const cases = await anon().get('/api/cases').expect(200);
-      expect(ids(cases.body)).toEqual(KAMINSKA_CASES);
-    });
-
-    it('acts as the account from X-User-Id (trimmed)', async () => {
-      const me = await anon()
-        .get('/api/me')
-        .set('X-User-Id', '  u-sikora ')
+        .send({ login: 'J.Kaminska', password: 'Kompas2026!' })
         .expect(200);
-      expect(me.body).toMatchObject({ id: 'u-sikora', name: 'Robert Sikora' });
+      expect(res.body).toMatchObject({
+        tokenType: 'Bearer',
+        expiresIn: 8 * 3600,
+        user: { id: 'u-kaminska', role: 'SUPERVISOR', name: 'Joanna Kamińska' },
+      });
+      expect(res.body.user).not.toHaveProperty('passwordHash');
+      expect(res.body.accessToken.split('.')).toHaveLength(3);
     });
 
-    it('answers an unknown id with 400 and a Polish message', async () => {
-      const res = await as('u-nobody').get('/api/cases').expect(400);
-      expect(res.body.message).toContain('u-nobody');
-      await as('u-nobody').get('/api/me').expect(400);
+    it('answers a wrong password and an unknown login with the same 401', async () => {
+      const wrong = await anon()
+        .post('/api/auth/login')
+        .send({ login: 'j.kaminska', password: 'nope' })
+        .expect(401);
+      const unknown = await anon()
+        .post('/api/auth/login')
+        .send({ login: 'nobody', password: 'nope' })
+        .expect(401);
+      expect(wrong.body.message).toBe('Nieprawidłowy login lub hasło.');
+      expect(unknown.body).toEqual(wrong.body);
     });
 
-    it('keeps health, config, the demo accounts and the doc files public', async () => {
-      await as('u-nobody').get('/api/health').expect(200);
-      await as('u-nobody').get('/api/config').expect(200);
-      await as('u-nobody').get('/api/users/demo').expect(200);
+    it('validates the body (400)', async () => {
+      await anon().post('/api/auth/login').send({ login: 'x' }).expect(400);
+    });
+
+    it('logout is a no-op 204', async () => {
+      await anon().post('/api/auth/logout').expect(204);
+    });
+  });
+
+  describe('401 without a valid token', () => {
+    it.each([
+      ['get', '/api/cases'],
+      ['get', '/api/cases/c-001'],
+      ['get', '/api/team'],
+      ['get', '/api/me'],
+      ['get', '/api/hr/overview'],
+      ['get', '/api/admin/users'],
+      ['get', '/api/docs'],
+      ['get', '/api/competency-model'],
+      ['post', '/api/demo/reset'],
+    ] as const)('%s %s', async (method, path) => {
+      await anon()[method](path).expect(401);
+    });
+
+    it('rejects a forged token', async () => {
+      await anon()
+        .get('/api/cases')
+        .set('Authorization', `Bearer ${kaminska.slice(0, -4)}AAAA`)
+        .expect(401);
+    });
+
+    it('keeps health, config, login and the doc files public', async () => {
+      await anon().get('/api/health').expect(200);
+      await anon().get('/api/config').expect(200);
       await anon()
         .get('/api/docs/ocena-okresowa/rozporzadzenie-oceny-okresowe-2016.pdf')
         .expect(200);
     });
   });
 
-  describe('GET /api/users/demo', () => {
-    it('lists every demo account as UserView, without internal links', async () => {
-      const res = await anon().get('/api/users/demo').expect(200);
-      expect(ids(res.body)).toEqual([
-        'u-kaminska',
-        'u-sikora',
-        'u-pawlak',
-        'u-lis',
-        'u-admin',
-      ]);
-      expect(res.body[0]).toEqual({
-        id: 'u-kaminska',
-        login: 'j.kaminska',
-        name: 'Joanna Kamińska',
-        firstName: 'Joanna',
-        lastName: 'Kamińska',
-        role: 'SUPERVISOR',
-        position: 'Naczelnik wydziału',
-        unit: 'Wydział Analiz i Koordynacji, Departament Spraw Cyfrowych',
-      });
-      expect(JSON.stringify(res.body)).not.toMatch(/passwordHash|evaluatorId/);
-    });
-  });
-
   describe('GET /api/me', () => {
     it.each([
-      [hr, 'HR', 'Agnieszka Lis'],
-      [admin, 'ADMIN', 'Marek Zając'],
-      [sikora, 'SUPERVISOR', 'Robert Sikora'],
-    ])('returns the account %s', async (userId, role, name) => {
-      const res = await as(userId).get('/api/me').expect(200);
+      ['hr', 'HR', 'Agnieszka Lis'],
+      ['admin', 'ADMIN', 'Marek Zając'],
+      ['sikora', 'SUPERVISOR', 'Robert Sikora'],
+    ])('returns the signed-in %s', async (who, role, name) => {
+      const token = { hr, admin, sikora }[who]!;
+      const res = await as(token).get('/api/me').expect(200);
       expect(res.body).toMatchObject({ role, name });
     });
   });
@@ -127,9 +129,19 @@ describe('Demo account switching, roles and permissions (e2e)', () => {
   describe('supervisor scope', () => {
     it('lists only own cases', async () => {
       const mine = await as(kaminska).get('/api/cases').expect(200);
-      expect(ids(mine.body)).toEqual(KAMINSKA_CASES);
+      expect(mine.body.map((c: { id: string }) => c.id)).toEqual([
+        'c-001',
+        'c-002',
+        'c-003',
+        'c-004',
+        'c-005',
+        'c-006',
+      ]);
       const theirs = await as(sikora).get('/api/cases').expect(200);
-      expect(ids(theirs.body)).toEqual(['c-101', 'c-102']);
+      expect(theirs.body.map((c: { id: string }) => c.id)).toEqual([
+        'c-101',
+        'c-102',
+      ]);
       const team = await as(sikora).get('/api/team').expect(200);
       expect(team.body.cases).toHaveLength(2);
     });
@@ -204,7 +216,7 @@ describe('Demo account switching, roles and permissions (e2e)', () => {
   });
 
   describe('ADMIN', () => {
-    it('lists users', async () => {
+    it('lists users without password hashes', async () => {
       const res = await as(admin).get('/api/admin/users').expect(200);
       expect(res.body.map((u: { login: string }) => u.login)).toEqual([
         'j.kaminska',
@@ -213,19 +225,21 @@ describe('Demo account switching, roles and permissions (e2e)', () => {
         'a.lis',
         'admin',
       ]);
+      expect(JSON.stringify(res.body)).not.toContain('scrypt');
     });
 
-    it('changes a role, which applies to that user from the next request', async () => {
+    it('changes a role, which applies to that user from then on', async () => {
       try {
         const res = await as(admin)
           .patch('/api/admin/users/u-pawlak')
           .send({ role: 'HR' })
           .expect(200);
         expect(res.body).toMatchObject({ id: 'u-pawlak', role: 'HR' });
-        const me = await as('u-pawlak').get('/api/me').expect(200);
+        const token = await loginAs(app, 'a.pawlak');
+        const me = await as(token).get('/api/me').expect(200);
         expect(me.body.role).toBe('HR');
-        await as('u-pawlak').get('/api/hr/overview').expect(200);
-        await as('u-pawlak').get('/api/team').expect(403);
+        await as(token).get('/api/hr/overview').expect(200);
+        await as(token).get('/api/team').expect(403);
       } finally {
         await as(admin)
           .patch('/api/admin/users/u-pawlak')
