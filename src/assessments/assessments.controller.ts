@@ -1,3 +1,4 @@
+import { Can } from '@nestjs/authorization';
 import { Body, Controller, HttpCode, Post } from '@nestjs/common';
 import {
   type EvaluateRequest,
@@ -9,6 +10,7 @@ import { AssessmentsService } from './assessments.service.js';
 import type { EvaluateResult } from './evaluate.rules.js';
 import type { SuggestLevelResult } from './suggest-level.rules.js';
 
+@Can.Anyone()
 @Controller('assessments')
 export class AssessmentsController {
   constructor(private readonly assessments: AssessmentsService) {}

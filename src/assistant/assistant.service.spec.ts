@@ -1,6 +1,13 @@
 import { NotFoundException } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
+import {
+  AuthenticationContext,
+  AuthenticationModule,
+} from '@nestjs/authentication';
+import { AuthorizationModule } from '@nestjs/authorization';
+import { CasePolicy } from '../auth/case.policy.js';
+import { USER_SEED } from '../auth/users.seed.js';
 import { CasesModule } from '../cases/cases.module.js';
 import { CasesService } from '../cases/cases.service.js';
 import { AssistantService } from './assistant.service.js';
@@ -17,10 +24,19 @@ describe('AssistantService', () => {
     const moduleRef = await Test.createTestingModule({
       imports: [
         ConfigModule.forRoot({ isGlobal: true, ignoreEnvFile: true }),
+        AuthenticationModule.forRoot({ globalGuard: false }),
+        AuthorizationModule.forRoot({ globalGuard: false }),
         CasesModule,
       ],
-      providers: [AssistantService, { provide: LlmClient, useValue: { chat } }],
-    }).compile();
+      providers: [
+        AssistantService,
+        CasePolicy,
+        { provide: LlmClient, useValue: { chat } },
+      ],
+    })
+      .overrideProvider(AuthenticationContext)
+      .useValue({ requireUser: () => USER_SEED[0] })
+      .compile();
     service = moduleRef.get(AssistantService);
     cases = moduleRef.get(CasesService);
   });

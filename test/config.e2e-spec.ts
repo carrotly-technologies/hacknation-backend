@@ -4,6 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
+import { loginAs, withToken } from './auth.helpers.js';
 
 async function createApp(): Promise<INestApplication<App>> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -34,11 +35,13 @@ describe('Config and FEATURE_ASSISTANT (e2e)', () => {
   it('enables the assistant when the flag is not set', async () => {
     delete process.env.FEATURE_ASSISTANT;
     app = await createApp();
+    const token = await loginAs(app, 'j.kaminska');
+    const http = () => withToken(app!, token);
     await request(app.getHttpServer())
       .get('/api/config')
       .expect(200)
       .expect({ features: { assistant: true } });
-    await request(app.getHttpServer())
+    await http()
       .post('/api/assistant/ask')
       .send({ question: 'Jak liczyć terminy?', assistant: 'FORMAL' })
       .expect(200);
@@ -47,23 +50,19 @@ describe('Config and FEATURE_ASSISTANT (e2e)', () => {
   it('hides the assistant with FEATURE_ASSISTANT=false', async () => {
     process.env.FEATURE_ASSISTANT = 'false';
     app = await createApp();
+    const token = await loginAs(app, 'j.kaminska');
+    const http = () => withToken(app!, token);
     await request(app.getHttpServer())
       .get('/api/config')
       .expect(200)
       .expect({ features: { assistant: false } });
-    await request(app.getHttpServer())
+    await http()
       .post('/api/assistant/ask')
       .send({ question: 'Jak liczyć terminy?', assistant: 'FORMAL' })
       .expect(404);
-    await request(app.getHttpServer())
-      .get('/api/assistant/suggestions')
-      .expect(404);
-    await request(app.getHttpServer())
-      .get('/api/assistant/documents')
-      .expect(404);
-    const docs = await request(app.getHttpServer())
-      .get('/api/docs')
-      .expect(200);
+    await http().get('/api/assistant/suggestions').expect(404);
+    await http().get('/api/assistant/documents').expect(404);
+    const docs = await http().get('/api/docs').expect(200);
     expect((docs.body as unknown[]).length).toBeGreaterThan(0);
     await request(app.getHttpServer())
       .get('/api/docs/ocena-okresowa/rozporzadzenie-oceny-okresowe-2016.pdf')

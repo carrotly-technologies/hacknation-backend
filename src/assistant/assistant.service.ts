@@ -39,7 +39,8 @@ export class AssistantService {
   }
 
   async ask(input: AskInput): Promise<AskResponse> {
-    const detail = input.caseId ? this.cases.detail(input.caseId) : null;
+    // Scoped: only a case the caller may open (403 otherwise).
+    const detail = input.caseId ? await this.cases.view(input.caseId) : null;
     if (input.assistant === 'CONVERSATION' && detail) {
       return this.conversation(input, detail);
     }

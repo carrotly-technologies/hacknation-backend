@@ -7,7 +7,9 @@ import {
   Patch,
   Post,
 } from '@nestjs/common';
-import type { CaseAction, CaseDetail } from './case.types.js';
+import { Can } from '@nestjs/authorization';
+import { Roles } from '../auth/roles.decorator.js';
+import type { CaseAction, CaseDetail, CaseSummary } from './case.types.js';
 import {
   type ActionInput,
   actionSchema,
@@ -23,46 +25,60 @@ export class CasesController {
   constructor(private readonly cases: CasesService) {}
 
   @Get('me')
+  @Can.Anyone()
   me() {
     return this.cases.me();
   }
 
   @Get('team')
+  @Roles('SUPERVISOR')
   team() {
     return this.cases.team();
   }
 
+  @Get('cases')
+  @Roles('SUPERVISOR', 'HR')
+  list(): CaseSummary[] {
+    return this.cases.visibleCases();
+  }
+
   @Get('cases/:id')
-  findOne(@Param('id') id: string): CaseDetail {
-    return this.cases.detail(id);
+  @Roles('SUPERVISOR', 'HR')
+  findOne(@Param('id') id: string): Promise<CaseDetail> {
+    return this.cases.view(id);
   }
 
   @Patch('cases/:id')
+  @Roles('SUPERVISOR')
   patch(
     @Param('id') id: string,
     @Body({ schema: patchCaseSchema }) body: PatchCase,
-  ): CaseDetail {
+  ): Promise<CaseDetail> {
     return this.cases.patch(id, body);
   }
 
   @Post('cases/:id/observations')
+  @Roles('SUPERVISOR')
   addObservation(
     @Param('id') id: string,
     @Body({ schema: observationSchema }) body: ObservationInput,
-  ): CaseDetail {
+  ): Promise<CaseDetail> {
     return this.cases.addObservation(id, body);
   }
 
   @Post('cases/:id/actions')
+  @Roles('SUPERVISOR')
   @HttpCode(200)
   action(
     @Param('id') id: string,
     @Body({ schema: actionSchema }) body: ActionInput,
-  ): CaseDetail {
+  ): Promise<CaseDetail> {
     return this.cases.action(id, body.action as CaseAction);
   }
 
+  /** Demo tool: any signed-in role may restore the seed. */
   @Post('demo/reset')
+  @Can.Anyone()
   @HttpCode(200)
   reset() {
     this.cases.reset();

@@ -4,6 +4,10 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { AuthenticationContext } from '@nestjs/authentication';
+import { AuthorizationService } from '@nestjs/authorization';
+import { CasePolicy } from '../auth/case.policy.js';
+import type { User } from '../auth/user.types.js';
 import { applyAction } from './actions.rules.js';
 import { fullName } from './case.rules.js';
 import { CaseRuleError, CaseValidationError } from './case-rule.error.js';
@@ -21,7 +25,7 @@ import type { ObservationInput, PatchCase } from './cases.schemas.js';
 import { formatDatePl } from './dates.js';
 import { describeDaysLeft } from './deadlines.rules.js';
 import { addObservation, applyPatch } from './patch.rules.js';
-import { OFFICE_NAME, SUPERVISOR_ID } from './seed/seed.data.js';
+import { OFFICE_NAME } from './seed/seed.data.js';
 
 export interface TodoItem {
   caseId: string;
@@ -44,26 +48,42 @@ const TODO_TEXT: Partial<Record<StageId, string>> = {
 
 @Injectable()
 export class CasesService {
-  constructor(private readonly store: CaseStore) {}
+  constructor(
+    private readonly store: CaseStore,
+    private readonly auth: AuthenticationContext,
+    private readonly authorization: AuthorizationService,
+  ) {}
 
   get today(): string {
     return this.store.today;
   }
 
+  /** The signed-in user, for GET /api/me. */
   me() {
-    const supervisor = this.store.evaluator(SUPERVISOR_ID);
+    const user = this.auth.requireUser();
     return {
-      name: fullName(supervisor),
-      position: supervisor.position,
-      unit: supervisor.unit,
+      id: user.id,
+      login: user.login,
+      name: `${user.firstName} ${user.lastName}`,
+      role: user.role,
+      position: user.position,
+      unit: user.unit,
       officeName: OFFICE_NAME,
     };
   }
 
-  team(): { cases: CaseSummary[]; todo: TodoItem[] } {
-    const records = this.store
+  /** Cases the caller may see: a supervisor's own, every case for HR. */
+  visibleCases(): CaseSummary[] {
+    const user = this.auth.requireUser();
+    return this.store
       .all()
-      .filter((c) => c.evaluatorId === SUPERVISOR_ID);
+      .filter((r) => user.role === 'HR' || isEvaluator(user, r))
+      .map((r) => toSummary(r, this.today));
+  }
+
+  team(): { cases: CaseSummary[]; todo: TodoItem[] } {
+    const user = this.auth.requireUser();
+    const records = this.store.all().filter((c) => isEvaluator(user, c));
     const cases = records.map((r) => toSummary(r, this.today));
     const todo = cases
       .flatMap((c): TodoItem[] => {
@@ -95,24 +115,25 @@ export class CasesService {
     return toSummary(record, this.today);
   }
 
-  detail(id: string): CaseDetail {
-    const record = this.record(id);
-    return toDetail(
-      record,
-      this.today,
-      this.store.evaluator(record.evaluatorId),
-      OFFICE_NAME,
-    );
+  /** GET /api/cases/:id: 404 for an unknown case, 403 for someone else's. */
+  async view(id: string): Promise<CaseDetail> {
+    await this.authorize('view', this.record(id));
+    return this.detail(id);
   }
 
-  patch(id: string, patch: PatchCase): CaseDetail {
+  async patch(id: string, patch: PatchCase): Promise<CaseDetail> {
     const record = this.record(id);
+    await this.authorize('edit', record);
     this.store.save(this.run(() => applyPatch(record, patch, this.today)));
     return this.detail(id);
   }
 
-  addObservation(id: string, input: ObservationInput): CaseDetail {
+  async addObservation(
+    id: string,
+    input: ObservationInput,
+  ): Promise<CaseDetail> {
     const record = this.record(id);
+    await this.authorize('edit', record);
     const next = this.run(() =>
       addObservation(
         record,
@@ -125,10 +146,31 @@ export class CasesService {
     return this.detail(id);
   }
 
-  action(id: string, action: CaseAction): CaseDetail {
+  async action(id: string, action: CaseAction): Promise<CaseDetail> {
     const record = this.record(id);
+    await this.authorize('edit', record);
     this.store.save(this.run(() => applyAction(record, action, this.today)));
     return this.detail(id);
+  }
+
+  private authorize(ability: 'view' | 'edit', record: CaseRecord) {
+    return this.authorization.authorize(
+      CasePolicy,
+      ability,
+      this.auth.requireUser(),
+      record,
+    );
+  }
+
+  /** Unscoped: for internal use. Routes go through view(). */
+  detail(id: string): CaseDetail {
+    const record = this.record(id);
+    return toDetail(
+      record,
+      this.today,
+      this.store.evaluator(record.evaluatorId),
+      OFFICE_NAME,
+    );
   }
 
   reset(): void {
@@ -169,4 +211,8 @@ export class CasesService {
       throw error;
     }
   }
+}
+
+function isEvaluator(user: User, record: CaseRecord): boolean {
+  return !!user.evaluatorId && record.evaluatorId === user.evaluatorId;
 }

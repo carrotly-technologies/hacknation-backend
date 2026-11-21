@@ -1,12 +1,14 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
+import { loginAs, withToken } from './auth.helpers.js';
 
 describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
   let app: INestApplication<App>;
+  let supervisor: string;
+  let hr: string;
 
   beforeAll(async () => {
     process.env.DEMO_TODAY = '2026-11-21';
@@ -16,6 +18,8 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
+    supervisor = await loginAs(app, 'j.kaminska');
+    hr = await loginAs(app, 'a.lis');
   });
 
   afterAll(async () => {
@@ -26,14 +30,18 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     await http().post('/api/demo/reset').expect(200);
   });
 
-  const http = () => request(app.getHttpServer());
+  const http = () => withToken(app, supervisor);
+  const asHr = () => withToken(app, hr);
   const act = (id: string, action: string) =>
     http().post(`/api/cases/${id}/actions`).send({ action });
 
-  it('GET /api/me returns the fictional supervisor', async () => {
+  it('GET /api/me returns the signed-in supervisor', async () => {
     const res = await http().get('/api/me').expect(200);
     expect(res.body).toEqual({
+      id: 'u-kaminska',
+      login: 'j.kaminska',
       name: 'Joanna Kamińska',
+      role: 'SUPERVISOR',
       position: 'Naczelnik wydziału',
       unit: expect.stringContaining('Wydział'),
       officeName: 'Ministerstwo Cyfryzacji (dane demonstracyjne)',
@@ -237,7 +245,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
   });
 
   it('HR overview counts and simulated reminders', async () => {
-    let res = await http().get('/api/hr/overview').expect(200);
+    let res = await asHr().get('/api/hr/overview').expect(200);
     expect(res.body.counters).toEqual({
       inProgress: 8,
       dueSoon: 5,
@@ -251,7 +259,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       lastReminderOn: null,
     });
 
-    res = await http()
+    res = await asHr()
       .post('/api/hr/reminders')
       .send({ caseIds: ['c-102', 'c-103'] })
       .expect(200);
@@ -262,13 +270,13 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     });
     expect(res.body.log[0].text).toContain('Robert Sikora');
 
-    const detail = await http().get('/api/cases/c-102').expect(200);
+    const detail = await asHr().get('/api/cases/c-102').expect(200);
     expect(detail.body.history.at(-1).text).toContain('Przypomnienie');
-    await http()
+    await asHr()
       .post('/api/hr/reminders')
       .send({ caseIds: ['nope'] })
       .expect(404);
-    await http().post('/api/hr/reminders').send({ caseIds: [] }).expect(400);
+    await asHr().post('/api/hr/reminders').send({ caseIds: [] }).expect(400);
   });
 
   it('POST /api/demo/reset restores the seed', async () => {

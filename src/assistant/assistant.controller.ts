@@ -1,3 +1,4 @@
+import { Can } from '@nestjs/authorization';
 import {
   Body,
   Controller,
@@ -18,6 +19,7 @@ import { AssistantService } from './assistant.service.js';
 import type { AskResponse } from './assistant.types.js';
 import { type DocumentListItem, listDocuments } from './documents.js';
 
+@Can.Anyone()
 @Controller('assistant')
 @UseGuards(AssistantEnabledGuard)
 export class AssistantController {

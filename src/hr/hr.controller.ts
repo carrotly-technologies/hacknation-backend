@@ -1,3 +1,4 @@
+import { Roles } from '../auth/roles.decorator.js';
 import { Body, Controller, Get, HttpCode, Post } from '@nestjs/common';
 import {
   type RemindersInput,
@@ -6,6 +7,7 @@ import {
 import { HrService } from './hr.service.js';
 
 @Controller('hr')
+@Roles('HR')
 export class HrController {
   constructor(private readonly hr: HrService) {}
 

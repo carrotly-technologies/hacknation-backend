@@ -1,12 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
+import { loginAs, withToken } from './auth.helpers.js';
 
 describe('Competency model, sheets and assessments (e2e)', () => {
   let app: INestApplication<App>;
+  let token: string;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -16,13 +17,14 @@ describe('Competency model, sheets and assessments (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
+    token = await loginAs(app, 'j.kaminska');
   });
 
   afterAll(async () => {
     await app.close();
   });
 
-  const http = () => request(app.getHttpServer());
+  const http = () => withToken(app, token);
 
   describe('GET /api/competency-model', () => {
     it('returns the model with Polish texts', async () => {

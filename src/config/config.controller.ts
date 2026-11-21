@@ -1,3 +1,4 @@
+import { Public } from '@nestjs/authentication';
 import { Controller, Get } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { type Features, readFeatures } from './features.js';
@@ -6,6 +7,7 @@ export interface AppConfigResponse {
   features: Features;
 }
 
+@Public()
 @Controller('config')
 export class AppConfigController {
   constructor(private readonly config: ConfigService) {}
