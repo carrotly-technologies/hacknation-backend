@@ -38,10 +38,19 @@ export type HistoryItem = SystemHistoryEntry | ExternalHistoryEntry;
 
 export type NextAssessment = 'OKRESOWA' | 'PIERWSZA';
 
+/** The job description (OSP) parts shown on the profile. */
+export interface PersonOsp {
+  title: string;
+  purpose: string;
+  mainTasks: string[];
+}
+
 /** GET /api/people/:personId. */
 export interface PersonProfile {
   person: Person;
   supervisor: Omit<Evaluator, 'id'> | null;
+  /** From the current case, else the latest; null when it has no OSP. */
+  osp: PersonOsp | null;
   /** Newest first; the external entry (if any) last. */
   history: HistoryItem[];
   currentCase: { id: string; path: Path; currentStage: StageId } | null;

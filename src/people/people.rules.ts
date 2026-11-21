@@ -1,9 +1,11 @@
 import { computeEvaluation, effectiveStage } from '../cases/case.rules.js';
 import type { CaseRecord, Evaluator } from '../cases/case.types.js';
 import { caseStatus, cycleLabel } from '../cases/stages.rules.js';
+import { findOsp } from '../osp/osp.data.js';
 import type {
   ExternalHistoryEntry,
   NextAssessment,
+  PersonOsp,
   PersonProfile,
   SystemHistoryEntry,
 } from './people.types.js';
@@ -54,6 +56,17 @@ export function nextAssessment(
 }
 
 /**
+ * The job description (OSP) of the current case, else of the latest one.
+ * Only the parts the profile shows: title, purpose and main tasks.
+ */
+export function personOsp(record: Pick<CaseRecord, 'ospId'>): PersonOsp | null {
+  const osp = findOsp(record.ospId);
+  return osp
+    ? { title: osp.title, purpose: osp.purpose, mainTasks: osp.mainTasks }
+    : null;
+}
+
+/**
  * The employee profile from the person's cases the caller may see. Null when
  * there are none (unknown person or no access: both a 404 for the caller).
  */
@@ -80,6 +93,7 @@ export function buildProfile(
   return {
     person: latest.person,
     supervisor,
+    osp: personOsp(current ?? latest),
     history: [...ordered.map((r) => systemEntry(r, today)), ...external],
     currentCase: current
       ? {
