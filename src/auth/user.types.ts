@@ -1,7 +1,7 @@
 export const ROLES = ['SUPERVISOR', 'HR', 'ADMIN'] as const;
 export type Role = (typeof ROLES)[number];
 
-/** A signed-in account. Never carries the password hash. */
+/** A demo account the caller acts as (`X-User-Id`). */
 export interface User {
   id: string;
   login: string;

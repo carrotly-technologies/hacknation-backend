@@ -5,7 +5,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
 import { JournalRepository } from './../src/journal/journal.repository.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { asUser } from './auth.helpers.js';
 
 // p-nowak and p-wojcik: cases of the demo supervisor; p-wieczorek: a case of
 // another evaluator (ev-sikora).
@@ -25,10 +25,10 @@ describe('Journal: notes and observations about an employee (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    supervisor = await loginAs(app, 'j.kaminska');
-    otherSupervisor = await loginAs(app, 'r.sikora');
-    hr = await loginAs(app, 'a.lis');
-    admin = await loginAs(app, 'admin');
+    supervisor = 'u-kaminska';
+    otherSupervisor = 'u-sikora';
+    hr = 'u-lis';
+    admin = 'u-admin';
   });
 
   afterAll(async () => {
@@ -39,7 +39,7 @@ describe('Journal: notes and observations about an employee (e2e)', () => {
     await http().post('/api/demo/reset').expect(200);
   });
 
-  const http = () => withToken(app, supervisor);
+  const http = () => asUser(app, supervisor);
   const observation = {
     date: '2026-11-20',
     criterionId: 'komunikacja',
@@ -196,26 +196,25 @@ describe('Journal: notes and observations about an employee (e2e)', () => {
       },
     );
 
-    it('401 without a token; 403 for HR, ADMIN and another supervisor', async () => {
+    it('400 for an unknown user; 403 for HR, ADMIN and another supervisor', async () => {
       await request(app.getHttpServer())
         .get('/api/people/p-nowak/notes')
-        .expect(401);
-      for (const token of [hr, admin]) {
-        await withToken(app, token)
-          .get('/api/people/p-nowak/notes')
-          .expect(403);
-        await withToken(app, token)
+        .set('X-User-Id', 'u-nobody')
+        .expect(400);
+      for (const user of [hr, admin]) {
+        await asUser(app, user).get('/api/people/p-nowak/notes').expect(403);
+        await asUser(app, user)
           .get('/api/people/p-nowak/observations')
           .expect(403);
-        await withToken(app, token).delete('/api/notes/jn-seed-1').expect(403);
+        await asUser(app, user).delete('/api/notes/jn-seed-1').expect(403);
       }
-      await withToken(app, otherSupervisor)
+      await asUser(app, otherSupervisor)
         .get('/api/people/p-nowak/notes')
         .expect(403);
-      await withToken(app, otherSupervisor)
+      await asUser(app, otherSupervisor)
         .get('/api/people/p-wieczorek/notes')
         .expect(200);
-      await withToken(app, otherSupervisor)
+      await asUser(app, otherSupervisor)
         .patch('/api/notes/jn-seed-1')
         .send({ text: 'x' })
         .expect(404);

@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { asUser } from './auth.helpers.js';
 
 async function createApp(): Promise<INestApplication<App>> {
   const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -35,8 +35,8 @@ describe('Config and FEATURE_ASSISTANT (e2e)', () => {
   it('enables the assistant when the flag is not set', async () => {
     delete process.env.FEATURE_ASSISTANT;
     app = await createApp();
-    const token = await loginAs(app, 'j.kaminska');
-    const http = () => withToken(app!, token);
+    const user = 'u-kaminska';
+    const http = () => asUser(app!, user);
     await request(app.getHttpServer())
       .get('/api/config')
       .expect(200)
@@ -50,8 +50,8 @@ describe('Config and FEATURE_ASSISTANT (e2e)', () => {
   it('hides the assistant with FEATURE_ASSISTANT=false', async () => {
     process.env.FEATURE_ASSISTANT = 'false';
     app = await createApp();
-    const token = await loginAs(app, 'j.kaminska');
-    const http = () => withToken(app!, token);
+    const user = 'u-kaminska';
+    const http = () => asUser(app!, user);
     await request(app.getHttpServer())
       .get('/api/config')
       .expect(200)

@@ -23,7 +23,7 @@ export class AdminController {
     return (await this.users.list()).map(toUserView);
   }
 
-  /** A new role applies to that user's next request (the token holds no role). */
+  /** A new role applies to that user's next request (the role is read on every request). */
   @Patch(':id')
   async update(
     @CurrentUser() me: User,

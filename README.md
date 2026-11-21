@@ -16,7 +16,6 @@ cp .env.example .env   # optional, defaults work out of the box
 | `FRONTEND_URL`      | `http://localhost:5173` | Origin allowed by CORS                                          |
 | `DEMO_TODAY`        | `2026-11-21`            | Demo "today" for all deadlines                                  |
 | `FEATURE_ASSISTANT` | `true`                  | AI assistant chat; `false` hides it and 404s `/api/assistant/*` |
-| `JWT_SECRET`        | dev-only default        | HS256 key for sign-in tokens (32+ bytes: `openssl rand -base64 32`); without it a warning is logged |
 | `DATABASE_URL`      | (unset)                 | PostgreSQL URL; unset = in-memory storage (lost on restart)     |
 
 ### Database (optional)
@@ -45,24 +44,24 @@ All routes are under the `/api` prefix:
 curl localhost:3000/api/health   # {"status":"ok"}
 ```
 
-## Sign-in, roles and permissions
+## Demo accounts, roles and permissions
 
-Every `/api/*` route needs `Authorization: Bearer <token>` (401 without a valid one), except `GET /api/health`,
-`GET /api/config`, `POST /api/auth/login` and the document files `GET /api/docs/<path>` (public legal texts opened
-from answer links in a new tab). A route for another role answers 403.
+There is no sign-in. Every request acts as a demo account picked with the `X-User-Id` header (an id from
+`src/auth/users.seed.ts`); without the header it acts as `u-kaminska` (SUPERVISOR), and an unknown id answers 400
+with a Polish message. The frontend has an account switcher in the header that sends this header. A route for
+another role answers 403. `GET /api/health`, `GET /api/config`, `GET /api/users/demo` and the document files
+`GET /api/docs/<path>` ignore the header.
 
 ```bash
-TOKEN=$(curl -s -X POST localhost:3000/api/auth/login -H 'content-type: application/json' \
-  -d '{"login":"j.kaminska","password":"Kompas2026!"}' | jq -r .accessToken)
-curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
+curl localhost:3000/api/me                          # Joanna Kamińska (SUPERVISOR)
+curl localhost:3000/api/cases -H 'X-User-Id: u-lis' # HR: every case
 ```
 
 | Route                        | What it does                                                                         |
 | ---------------------------- | ------------------------------------------------------------------------------------ |
-| `POST /api/auth/login`       | `{ login, password }` → `{ accessToken, tokenType, expiresIn, user }`; JWT HS256, 8 h |
-| `POST /api/auth/logout`      | No-op (204): tokens are stateless, the client drops its token                        |
-| `GET /api/me`                | The signed-in user: `{ id, login, name, role, position, unit, officeName }`          |
-| `GET /api/admin/users`       | ADMIN: every account (no password hashes)                                            |
+| `GET /api/users/demo`        | Every demo account (`UserView[]`: `{ id, login, name, firstName, lastName, role, position, unit }`) for the switcher |
+| `GET /api/me`                | The current account: `{ id, login, name, role, position, unit, officeName }`         |
+| `GET /api/admin/users`       | ADMIN: every account                                                                 |
 | `PATCH /api/admin/users/:id` | ADMIN: `{ role }`; 409 for removing your own ADMIN role                              |
 
 | Role         | May                                                                                                   | 403 on                                                    |
@@ -72,10 +71,9 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 | `ADMIN`      | `/api/admin/*`                                                                                        | cases, `/api/team`, `/api/hr/*`, journal                  |
 | every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP, `POST /api/demo/reset` | —                                                         |
 
-- The role is read from the account on every request, never from the token: a role changed by an ADMIN applies to
-  that user's next request (the frontend picks it up at the next sign-in).
-- Passwords are scrypt hashes (`PasswordHasher` of `@nestjs/authentication`, Node's `crypto.scrypt`); a wrong
-  password and an unknown login get the same 401. `node scripts/hash-password.mjs <password>` prints a hash.
+- `DemoUserAuth` (`src/auth/demo-user.auth.ts`) is the only credential provider of the `@nestjs/authentication`
+  guard: it loads the account on every request, so a role changed by an ADMIN applies to that user's next request.
+  The policies (`CasePolicy`, `RolePolicy`) get the same `User` as with any other provider.
 - Accounts sit behind `UsersRepository` (`src/auth/users.repository.ts`); the in-memory implementation
   (`users.in-memory.repository.ts`, seed in `users.seed.ts`) is bound in `AuthModule` and can be swapped for a
   database one there. Supervisors are linked to `EVALUATORS` of the case seed by `evaluatorId`.
@@ -84,13 +82,13 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 
 All people are fictional.
 
-| Login        | Password      | Role         | Who                                     |
-| ------------ | ------------- | ------------ | --------------------------------------- |
-| `j.kaminska` | `Kompas2026!` | `SUPERVISOR` | Joanna Kamińska, 6 cases (c-001…c-006)  |
-| `r.sikora`   | `Kompas2026!` | `SUPERVISOR` | Robert Sikora, 2 cases (c-101, c-102)   |
-| `a.pawlak`   | `Kompas2026!` | `SUPERVISOR` | Agnieszka Pawlak, 2 cases (c-103, c-104) |
-| `a.lis`      | `Kompas2026!` | `HR`         | Agnieszka Lis, HR (kadry)               |
-| `admin`      | `Kompas2026!` | `ADMIN`      | Marek Zając, administrator              |
+| `X-User-Id`  | Login        | Role         | Who                                      |
+| ------------ | ------------ | ------------ | ---------------------------------------- |
+| `u-kaminska` | `j.kaminska` | `SUPERVISOR` | Joanna Kamińska, 6 cases (c-001…c-006), default |
+| `u-sikora`   | `r.sikora`   | `SUPERVISOR` | Robert Sikora, 2 cases (c-101, c-102)    |
+| `u-pawlak`   | `a.pawlak`   | `SUPERVISOR` | Agnieszka Pawlak, 2 cases (c-103, c-104) |
+| `u-lis`      | `a.lis`      | `HR`         | Agnieszka Lis, HR (kadry)                |
+| `u-admin`    | `admin`      | `ADMIN`      | Marek Zając, administrator               |
 
 ## API
 
@@ -207,8 +205,7 @@ as the `hacknation-backend` application, built from this repo's `Dockerfile`:
 
 - URL: <https://api.hacknation.rabbithole.carrotly.tech> (health: `/api/health`)
 - Every push to `main` triggers a new deploy (GitHub App source, auto-deploy on).
-- Env: `PORT=3000`, `FRONTEND_URL=https://hacknation.rabbithole.carrotly.tech`, `JWT_SECRET` (32+ random bytes),
-  optional `FEATURE_ASSISTANT=false`.
+- Env: `PORT=3000`, `FRONTEND_URL=https://hacknation.rabbithole.carrotly.tech`, optional `FEATURE_ASSISTANT=false`.
   Change them in the Coolify app settings and redeploy.
 
 Build and run the image locally:

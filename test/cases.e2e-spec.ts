@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { asUser } from './auth.helpers.js';
 
 describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
   let app: INestApplication<App>;
@@ -18,8 +18,8 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    supervisor = await loginAs(app, 'j.kaminska');
-    hr = await loginAs(app, 'a.lis');
+    supervisor = 'u-kaminska';
+    hr = 'u-lis';
   });
 
   afterAll(async () => {
@@ -30,8 +30,8 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     await http().post('/api/demo/reset').expect(200);
   });
 
-  const http = () => withToken(app, supervisor);
-  const asHr = () => withToken(app, hr);
+  const http = () => asUser(app, supervisor);
+  const asHr = () => asUser(app, hr);
   const act = (id: string, action: string) =>
     http().post(`/api/cases/${id}/actions`).send({ action });
 
