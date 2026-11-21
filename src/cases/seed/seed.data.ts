@@ -299,6 +299,22 @@ function sheetBCase(r: Rel): CaseRecord {
         goals:
           'Wdrożenie wspólnego kalendarza wizyt i wydarzeń do końca 2025 r.',
       },
+      expectations: {
+        zarzadzanie_ludzmi:
+          'Przydziela zadania z jasnym zakresem i terminem; co kwartał przekazuje członkom zespołu informację zwrotną.',
+        podejmowanie_decyzji:
+          'Podejmuje decyzje w sprawach organizacji wizyt w swoim zakresie, bez odkładania ich na ostatnią chwilę.',
+        organizacja_pracy:
+          'Planuje kalendarz wizyt z wyprzedzeniem i ustala zastępstwa w zespole.',
+        wspolpraca:
+          'Uzgadnia przygotowanie wizyt z departamentami merytorycznymi i protokołem.',
+        komunikacja:
+          'Przekazuje kierownictwu zwięzłe notatki przed wizytami i po nich.',
+        wykorzystywanie_wiedzy:
+          'Zna zasady rozliczania dotacji i zamówień na usługi podróży; aktualizuje wiedzę po zmianach przepisów.',
+        negocjowanie:
+          'Przed każdą rundą uzgodnień przygotowuje mandat i stanowisko minimalne.',
+      },
       confirmedByEvaluatorOn: confirmed,
       acknowledgedByEmployeeOn: confirmed,
     },
@@ -452,14 +468,9 @@ function afterNegativeCase(r: Rel): CaseRecord {
     completedOn: { OSP_ANALYSIS: r.days(-2) },
     partI: {
       ...emptyPartI(),
+      // Topics, expectations and the assessment date stay empty: the
+      // supervisor fills part I by hand at the opening talk.
       additionalCriteria: ['myslenie_analityczne'],
-      topics: {
-        duties:
-          'Ocena obiektów pod kątem infrastruktury krytycznej i kontrole podmiotów krytycznych (zadania 6 i 7 z OSP).',
-        criteria: '',
-        expectations: '',
-        goals: '',
-      },
     },
     history: [
       {
@@ -512,6 +523,29 @@ function objectionPeriodCase(r: Rel): CaseRecord {
       ...emptyPartI(),
       additionalCriteria: ['kreatywnosc'],
       assessmentDue: defaultAssessmentDue(confirmed),
+      topics: {
+        duties:
+          'Omówiono zadania z OSP: opiniowanie projektów aktów prawnych pod kątem zgodności z prawem UE, przygotowanie uwag w uzgodnieniach międzyresortowych i udział w konferencjach uzgodnieniowych.',
+        criteria:
+          'Pięć kryteriów obowiązkowych arkusza C oraz kryterium dodatkowe „Kreatywność”: zadania obejmują proponowanie nowych rozwiązań w projektach przepisów.',
+        expectations:
+          'Uzgodniono oczekiwania dla każdego kryterium (niżej); szczególny nacisk na terminowość uwag w uzgodnieniach.',
+        goals: '',
+      },
+      expectations: {
+        wykorzystywanie_wiedzy:
+          'Stosuje aktualne orzecznictwo i wytyczne w opiniach; dzieli się z wydziałem wnioskami ze szkoleń.',
+        rzetelnosc:
+          'Opinie i uwagi sprawdzone przed przekazaniem, w terminach wyznaczonych w uzgodnieniach.',
+        organizacja_pracy:
+          'Planuje pracę nad kilkoma projektami naraz; przy zbiegu terminów uzgadnia priorytety z naczelnikiem.',
+        wspolpraca:
+          'Uzgadnia stanowisko z departamentami merytorycznymi przed konferencją uzgodnieniową.',
+        komunikacja:
+          'Uwagi do projektów są zwięzłe, z podstawą prawną i propozycją brzmienia przepisu.',
+        kreatywnosc:
+          'Proponuje alternatywne brzmienie przepisów, gdy projekt budzi wątpliwości.',
+      },
       confirmedByEvaluatorOn: confirmed,
       acknowledgedByEmployeeOn: confirmed,
     },
