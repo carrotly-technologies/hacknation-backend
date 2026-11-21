@@ -17,6 +17,19 @@ cp .env.example .env   # optional, defaults work out of the box
 | `DEMO_TODAY`        | `2026-11-21`            | Demo "today" for all deadlines                                  |
 | `FEATURE_ASSISTANT` | `true`                  | AI assistant chat; `false` hides it and 404s `/api/assistant/*` |
 | `JWT_SECRET`        | dev-only default        | HS256 key for sign-in tokens (32+ bytes: `openssl rand -base64 32`); without it a warning is logged |
+| `DATABASE_URL`      | (unset)                 | PostgreSQL URL; unset = in-memory storage (lost on restart)     |
+
+### Database (optional)
+
+```bash
+docker compose up -d db   # PostgreSQL 17 on localhost:5432
+DATABASE_URL=postgres://hacknation:hacknation@localhost:5432/hacknation npm run start:dev
+```
+
+`src/database` (global module) connects with Drizzle ORM and `pg` and applies the migrations from `drizzle/` at
+startup, before the first request. After changing a `src/**/*.tables.ts` schema run
+`npx drizzle-kit generate --name=<change>` and commit the generated folder. Without `DATABASE_URL` every module uses
+in-memory storage.
 
 ## Run
 
@@ -54,9 +67,9 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 
 | Role         | May                                                                                                   | 403 on                                                    |
 | ------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), read, PATCH, observations and actions of own cases     | other supervisors' cases, `/api/hr/*`, `/api/admin/*`     |
-| `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only)                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*` |
-| `ADMIN`      | `/api/admin/*`                                                                                        | cases, `/api/team`, `/api/hr/*`                           |
+| `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*` |
+| `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only)                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*`, journal |
+| `ADMIN`      | `/api/admin/*`                                                                                        | cases, `/api/team`, `/api/hr/*`, journal                  |
 | every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP, `POST /api/demo/reset` | —                                                         |
 
 - The role is read from the account on every request, never from the token: a role changed by an ADMIN applies to
@@ -81,8 +94,7 @@ All people are fictional.
 
 ## API
 
-Contract: `notatki/api-kontrakt-v1.md`. No database: static data and pure functions.
-
+Contract: `notatki/api-kontrakt-v1.md`. Static data and pure functions.
 | Route                                 | What it does                                                                                       |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `GET /api/competency-model`           | 14 competencies, 49 indicators with level descriptions, scale 1/3/5/7/9, instructions (Polish)     |
@@ -117,7 +129,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/osp`                   | The 3 real OSP documents from the materials (`src/osp/osp.data.ts`)                     |
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
-| `POST /api/demo/reset`           | Restores the seed                                                                        |
+| `POST /api/demo/reset`           | Restores the seed (cases and the journal)                                                |
 
 - Rules are pure functions with unit tests in `src/cases/*.rules.ts`: deadlines (`deadlines.rules.ts`, KC term rules
   incl. shifting from Saturdays, Sundays and holidays, each `Deadline` with `legalBasis`), stages
@@ -130,6 +142,25 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 
 The competency data in `src/competency-model/data/model.data.ts` is generated from `notatki/model-kompetencji.json`
 by `node scripts/generate-model-data.mjs` (then run prettier on it). Don't edit it by hand.
+
+### Journal: notes and observations about an employee
+
+A supervisor's notes and S-D-R observations about each employee, kept all year, independent of the case stage
+(`src/journal`). Stored in PostgreSQL (`journal_notes`, `journal_observations`) with `DATABASE_URL`, in memory
+without it; the demo seed goes into empty tables only. `SUPERVISOR` only (HR and ADMIN get 403: notes are private),
+and only about people from cases the supervisor evaluates (else 403, unknown person 404); an entry is visible to its
+author only (someone else's entry: 404). Lists are newest first.
+
+| Route                                  | What it does                                                                              |
+| -------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `GET /api/people/:personId/notes`      | The user's notes about the person                                                         |
+| `POST /api/people/:personId/notes`     | `{ text }` (1–5000 chars, trimmed) → note (201)                                           |
+| `PATCH /api/notes/:id`                 | `{ text }` → note with new `updatedAt`                                                    |
+| `DELETE /api/notes/:id`                | 204                                                                                       |
+| `GET /api/people/:personId/observations` | The user's observations about the person, by `date`                                     |
+| `POST /api/people/:personId/observations` | `{ date, criterionId, indicatorId?, kind, situation, action, result }` → observation (201); 400 for an unknown criterion, an indicator of another criterion, a date after today, S/D/R empty or over 2000 chars |
+| `PATCH /api/observations/:id`          | Any of those fields; the merged observation is validated again                            |
+| `DELETE /api/observations/:id`         | 204                                                                                       |
 
 ### AI assistant (source-grounded)
 

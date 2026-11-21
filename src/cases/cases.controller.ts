@@ -18,11 +18,15 @@ import {
   type PatchCase,
   patchCaseSchema,
 } from './cases.schemas.js';
+import { DemoReset } from '../demo/demo-reset.service.js';
 import { CasesService } from './cases.service.js';
 
 @Controller()
 export class CasesController {
-  constructor(private readonly cases: CasesService) {}
+  constructor(
+    private readonly cases: CasesService,
+    private readonly demoReset: DemoReset,
+  ) {}
 
   @Get('me')
   @Can.Anyone()
@@ -80,8 +84,9 @@ export class CasesController {
   @Post('demo/reset')
   @Can.Anyone()
   @HttpCode(200)
-  reset() {
+  async reset() {
     this.cases.reset();
+    await this.demoReset.run();
     return { ok: true, today: this.cases.today };
   }
 }
