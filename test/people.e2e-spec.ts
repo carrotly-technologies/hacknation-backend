@@ -55,6 +55,11 @@ describe('People: employee profile (e2e)', () => {
         position: 'Naczelnik wydziału',
         unit: expect.any(String),
       },
+      osp: {
+        title: expect.any(String),
+        purpose: expect.any(String),
+        mainTasks: expect.arrayContaining([expect.any(String)]),
+      },
       history: [
         {
           source: 'SYSTEM',
@@ -97,6 +102,8 @@ describe('People: employee profile (e2e)', () => {
     const res = await asSupervisor().get('/api/people/p-mazur').expect(200);
     expect(res.body.currentCase).toMatchObject({ id: 'c-004', path: 'FIRST' });
     expect(res.body.nextAssessment).toBe('PIERWSZA');
+    // The first assessment case has no OSP attached.
+    expect(res.body.osp).toBeNull();
   });
 
   it("a supervisor gets 404 for someone else's employee and an unknown person", async () => {

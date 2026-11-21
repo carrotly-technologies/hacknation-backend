@@ -72,6 +72,18 @@ describe('people.rules', () => {
     expect(p.supervisor?.lastName).toBe('Kamińska');
   });
 
+  it('takes the job description from the current case, null without one', () => {
+    const p = profile([seed('c-001')])!;
+    expect(p.osp).toEqual({
+      title: expect.any(String),
+      purpose: expect.any(String),
+      mainTasks: expect.arrayContaining([expect.any(String)]),
+    });
+    expect(p.osp).not.toHaveProperty('softCompetencies');
+    // The first assessment case of p-mazur has no OSP attached.
+    expect(profile([seed('c-004')])!.osp).toBeNull();
+  });
+
   it('the first assessment path asks for the first assessment', () => {
     const p = profile([seed('c-004')])!;
     expect(p.currentCase).toMatchObject({ id: 'c-004', path: 'FIRST' });
