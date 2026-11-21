@@ -4,6 +4,7 @@ import { AuthorizationModule } from '@nestjs/authorization';
 import { AckModule } from './ack/ack.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { AuthenticationRoot, AuthModule } from './auth/auth.module.js';
+import { BrandingModule } from './branding/branding.module.js';
 import { AppConfigModule } from './config/app-config.module.js';
 import { AssistantModule } from './assistant/assistant.module.js';
 import { AssessmentsModule } from './assessments/assessments.module.js';
@@ -40,6 +41,7 @@ import { SheetsModule } from './sheets/sheets.module.js';
     DocsModule,
     AdminModule,
     JournalModule,
+    BrandingModule,
   ],
 })
 export class AppModule {}
