@@ -91,6 +91,38 @@ describe('Source documents (e2e)', () => {
     expect(docs.find((d) => d.id === 'opis-zadania')?.indexed).toBe(false);
   });
 
+  it('lists the civil service act and the HR standards with their PDFs', async () => {
+    const docs = (await get('/api/docs').expect(200)).body as {
+      id: string;
+      url: string | null;
+      indexed: boolean;
+    }[];
+    for (const [id, url] of [
+      ['U', '/api/docs/akty-prawne/ustawa-o-sluzbie-cywilnej.pdf'],
+      ['SZ', '/api/docs/akty-prawne/standardy-zzl.pdf'],
+    ]) {
+      expect(docs.find((d) => d.id === id)).toMatchObject({
+        url,
+        indexed: true,
+      });
+      await get(url).expect(200);
+    }
+  });
+
+  it('answers from the HR standards with a link to their page', async () => {
+    const res = await withToken(app, token)
+      .post('/api/assistant/ask')
+      .send({ question: 'Co standardy ZZL mówią o IPRZ?', assistant: 'FORMAL' })
+      .expect(200);
+    const sources = res.body.sources as { ref: string; url: string | null }[];
+    expect(sources).toContainEqual(
+      expect.objectContaining({
+        ref: expect.stringContaining('cz. VI pkt 2 standardów ZZL'),
+        url: '/api/docs/akty-prawne/standardy-zzl.pdf#page=16',
+      }),
+    );
+  });
+
   it('links each source of an answer, PDFs on their page', async () => {
     const res = await withToken(app, token)
       .post('/api/assistant/ask')

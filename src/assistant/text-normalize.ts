@@ -20,11 +20,14 @@ export function foldDiacritics(text: string): string {
   return text.toLowerCase().replace(/[ąćęłńóśźż]/g, (c) => DIACRITICS[c]);
 }
 
-const STOPWORDS = new Set(
-  'a aby albo ale az bo by byc byl byla bylo byly bedzie beda ci co czy dla do gdy gdzie go i ich ile im ja jak jaka jaki jakie jakiej jako je jego jej jest jesli jezeli juz ktora ktore ktory ktorych ktorym kto lub ma maja mi mnie moze na nad nie niz nim o od oraz po pod przez przy sa sie sobie ta tak takze te tego tej ten to tu tym tylko u w we wiec wszystko z za ze zas czym jakim kiedy mam mozna nalezy trzeba powinien musi'.split(
+const STOPWORDS = new Set([
+  ...'a aby albo ale az bo by byc byl byla bylo byly bedzie beda ci co czy dla do gdy gdzie go i ich ile im ja jak jaka jaki jakie jakiej jako je jego jej jest jesli jezeli juz ktora ktore ktory ktorych ktorym kto lub ma maja mi mnie moze na nad nie niz nim o od oraz po pod przez przy sa sie sobie ta tak takze te tego tej ten to tu tym tylko u w we wiec wszystko z za ze zas czym jakim kiedy mam mozna nalezy trzeba powinien musi'.split(
     ' ',
   ),
-);
+  // "z uwzględnieniem" ("taking into account") is a fixed phrase of legal
+  // texts, not a topic; the noun ("uwzględnienie sprzeciwu") stays indexed.
+  'uwzglednieniem',
+]);
 
 /** Longest first; stripped only when a stem of at least 4 letters remains. */
 const SUFFIXES = [

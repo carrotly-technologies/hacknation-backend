@@ -28,6 +28,11 @@ export function parseSources(line: string): Expected[] {
       if (doc === 'U') {
         for (const m of seg.matchAll(/art\. (\d+[a-z]?)/g))
           units.push(`art. ${m[1]}`);
+      } else if (doc === 'SZ') {
+        // "cz. VI pkt 1–2": the points; "s. 15" is the printed page, not the
+        // PDF page the chunks carry, so it is not used.
+        for (const m of seg.matchAll(/cz\. ([IVX]+) pkt (\d+)(?:[–-](\d+))?/g))
+          for (const n of range(m[2], m[3])) units.push(`cz. ${m[1]} pkt ${n}`);
       } else if (doc === 'RO' || doc === 'RP') {
         for (const m of seg.matchAll(/§ (\d+)/g)) units.push(`§ ${m[1]}`);
         for (const m of seg.matchAll(/zał\. (\d+)/g))

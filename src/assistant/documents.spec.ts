@@ -4,7 +4,6 @@ import { DOCS_DIR } from '../docs/docs-files.js';
 import { KNOWLEDGE_CHUNKS } from './data/knowledge.data.js';
 import {
   chunkUrl,
-  CIVIL_SERVICE_ACT_ISAP_URL,
   INDEXED_DOCUMENT_IDS,
   listDocuments,
   NO_SOURCE_FILE,
@@ -29,6 +28,9 @@ describe('source documents', () => {
       'zadanie/regulamin-zadania.pdf',
       'opisy-stanowisk/osp-dsi-wwi-5-radca.docx',
       'model-kompetencji/model-kompetencji.xlsx',
+      'akty-prawne/ustawa-o-sluzbie-cywilnej.pdf',
+      'akty-prawne/standardy-zzl.pdf',
+      'akty-prawne/standardy-zzl-zmiana-2020.pdf',
     ]) {
       expect(files.has(f)).toBe(true);
     }
@@ -51,8 +53,21 @@ describe('source documents', () => {
     );
   });
 
-  it('links the act to ISAP and leaves documents without a file unlinked', () => {
-    expect(chunkUrl(chunk('U', 39))).toBe(CIVIL_SERVICE_ACT_ISAP_URL);
+  it('links the act and the HR standards to their PDFs in docs/', () => {
+    expect(chunkUrl(chunk('U', 39))).toBe(
+      '/api/docs/akty-prawne/ustawa-o-sluzbie-cywilnej.pdf#page=39',
+    );
+    expect(chunkUrl(chunk('SZ', 16))).toBe(
+      '/api/docs/akty-prawne/standardy-zzl.pdf#page=16',
+    );
+    for (const id of ['U', 'SZ']) {
+      expect(listDocuments().find((d) => d.id === id)).toMatchObject({
+        indexed: true,
+      });
+    }
+  });
+
+  it('leaves documents without a file unlinked', () => {
     expect(chunkUrl(chunk('QA'))).toBeNull();
     const lt = listDocuments().find((d) => d.id === 'LT');
     expect(lt).toMatchObject({

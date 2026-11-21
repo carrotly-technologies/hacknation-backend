@@ -1,10 +1,6 @@
 import { docsUrl } from '../docs/docs-files.js';
 import type { KnowledgeChunk, KnowledgeDocId } from './knowledge.types.js';
 
-/** Official consolidated text of the civil service act in ISAP (Sejm). */
-export const CIVIL_SERVICE_ACT_ISAP_URL =
-  'https://isap.sejm.gov.pl/isap.nsf/DocDetails.xsp?id=WDU20082271505';
-
 export const NO_SOURCE_FILE = 'brak pliku źródłowego';
 
 export interface SourceDocument {
@@ -15,8 +11,6 @@ export interface SourceDocument {
   description: string;
   /** Path in docs/, or null when the document is not in the repo. */
   file: string | null;
-  /** Where to open it when there is no file in docs/. */
-  externalUrl?: string;
   /** Whether the assistant answers from it (it is in the knowledge base). */
   indexed: boolean;
   note?: string;
@@ -30,10 +24,29 @@ export const SOURCE_DOCUMENTS: SourceDocument[] = [
       'Ustawa z dnia 21 listopada 2008 r. o służbie cywilnej (tekst jednolity)',
     description:
       'art. 35–38 (pierwsza ocena), art. 81–83 (ocena okresowa, sprzeciw), art. 89, art. 108',
-    file: null,
-    externalUrl: CIVIL_SERVICE_ACT_ISAP_URL,
+    file: 'akty-prawne/ustawa-o-sluzbie-cywilnej.pdf',
     indexed: true,
-    note: 'oficjalny tekst w ISAP (sejm.gov.pl)',
+    note: 'tekst ujednolicony z ISAP (sejm.gov.pl), na podstawie t.j. Dz.U. z 2026 r. poz. 590',
+  },
+  {
+    id: 'SZ',
+    title:
+      'Standardy zarządzania zasobami ludzkimi w służbie cywilnej (zarządzenie nr 6 Szefa Służby Cywilnej z 12 marca 2020 r.)',
+    description:
+      'organizacja zarządzania ludźmi, nabór, motywowanie, rozwój i szkolenia (IPRZ, plan szkoleń), informacja zwrotna',
+    file: 'akty-prawne/standardy-zzl.pdf',
+    indexed: true,
+    note: 'cz. III pkt 1 w bazie w brzmieniu zarządzenia nr 7 z 16 grudnia 2020 r.',
+  },
+  {
+    id: 'standardy-zzl-zmiana',
+    title:
+      'Zarządzenie nr 7 Szefa Służby Cywilnej z 16 grudnia 2020 r. zmieniające standardy ZZL',
+    description:
+      'nowe brzmienie cz. III pkt 1: obsadzanie stanowisk, na których kieruje się pracownikami',
+    file: 'akty-prawne/standardy-zzl-zmiana-2020.pdf',
+    indexed: false,
+    note: 'treść w bazie jako część standardów ZZL',
   },
   {
     id: 'RO',
@@ -170,10 +183,9 @@ export const SOURCE_DOCUMENTS: SourceDocument[] = [
 
 const byId = new Map(SOURCE_DOCUMENTS.map((d) => [d.id, d]));
 
-/** Where a document opens: its file in docs/, an official page, or nowhere. */
+/** Where a document opens: its file in docs/, or nowhere. */
 export function documentUrl(doc: SourceDocument): string | null {
-  if (doc.file) return docsUrl(doc.file);
-  return doc.externalUrl ?? null;
+  return doc.file ? docsUrl(doc.file) : null;
 }
 
 /** The link of a knowledge-base excerpt, on its page for a local PDF. */

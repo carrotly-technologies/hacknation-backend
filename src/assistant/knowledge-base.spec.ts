@@ -8,7 +8,20 @@ describe('KnowledgeBase retrieval', () => {
   it('ships chunks of every source with a citable ref', () => {
     const docs = new Set(kb.chunks.map((c) => c.doc));
     expect([...docs].sort()).toEqual(
-      ['AB', 'AC', 'AP', 'LT', 'MK', 'PO', 'PP', 'QA', 'RO', 'RP', 'U'].sort(),
+      [
+        'AB',
+        'AC',
+        'AP',
+        'LT',
+        'MK',
+        'PO',
+        'PP',
+        'QA',
+        'RO',
+        'RP',
+        'SZ',
+        'U',
+      ].sort(),
     );
     for (const c of kb.chunks) {
       expect(c.ref).toBeTruthy();
@@ -46,6 +59,26 @@ describe('KnowledgeBase retrieval', () => {
     expect(first.chunk.ref).toContain('„współpraca”');
   });
 
+  it('chunks the HR standards by part and point, with the 2020 amendment', () => {
+    const sz = kb.chunks.filter((c) => c.doc === 'SZ');
+    const iprz = sz.find((c) => c.unit === 'cz. VI pkt 2');
+    expect(iprz?.text).toContain('indywidualnych programów');
+    expect(iprz?.ref).toBe(
+      'cz. VI pkt 2 standardów ZZL („Rozwój i szkolenia”, s. 15)',
+    );
+    expect(iprz?.page).toBe(16);
+    const dg = sz.find((c) => c.unit === 'cz. I pkt 3');
+    expect(dg?.text).toMatch(/kierownika\surzędu/);
+    // cz. III pkt 1 in the wording of zarządzenie nr 7 of 16.12.2020.
+    const amended = sz.filter((c) => c.unit === 'cz. III pkt 1');
+    expect(amended).toHaveLength(1);
+    expect(amended[0].text).toContain('Obsadzanie stanowisk');
+    expect(amended[0].ref).toContain('zarządzenia nr 7');
+    for (const part of ['II', 'III', 'IV', 'V', 'VI', 'VII']) {
+      expect(sz.some((c) => c.unit === `cz. ${part}`)).toBe(true);
+    }
+  });
+
   it('chunks acts by legal unit', () => {
     const art = kb.chunks.find((c) =>
       c.ref.startsWith('art. 81 ust. 4 ustawy o służbie cywilnej'),
@@ -61,6 +94,7 @@ describe('KnowledgeBase retrieval', () => {
       '§ 10 ust. 1 rozporządzenia w sprawie pierwszej',
     ],
     ['Kiedy używa się arkusza A, B, a kiedy C?', '§ 3'],
+    ['Co standardy ZZL mówią o IPRZ?', 'cz. VI pkt 2 standardów ZZL'],
   ])('finds the rule for "%s"', (question, ref) => {
     expect(top(question).some((r) => r.startsWith(ref))).toBe(true);
   });
