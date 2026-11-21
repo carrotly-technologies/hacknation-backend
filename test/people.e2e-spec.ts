@@ -123,6 +123,37 @@ describe('People: employee profile (e2e)', () => {
     await withToken(app, hr).get('/api/people/p-nowak').expect(200);
   });
 
+  it('PATCH /api/people/:personId saves the data; 400 for a future date; 404 without access', async () => {
+    const data = {
+      position: 'Starszy specjalista',
+      unit: 'Wydział Kadr',
+      employment: 'PRACOWNIK',
+      hiredOn: '2020-01-15',
+    };
+    const res = await asSupervisor()
+      .patch('/api/people/p-nowak')
+      .send(data)
+      .expect(200);
+    expect(res.body.person).toMatchObject(data);
+    const again = await asSupervisor().get('/api/people/p-nowak').expect(200);
+    expect(again.body.person).toMatchObject(data);
+    const caseRes = await asSupervisor().get('/api/cases/c-001').expect(200);
+    expect(caseRes.body.person.position).toBe('Starszy specjalista');
+
+    await asSupervisor()
+      .patch('/api/people/p-nowak')
+      .send({ ...data, hiredOn: '2099-01-01' })
+      .expect(400);
+    await asSupervisor()
+      .patch('/api/people/p-nowak')
+      .send({ ...data, position: ' ' })
+      .expect(400);
+    await asSupervisor()
+      .patch('/api/people/p-wieczorek')
+      .send(data)
+      .expect(404);
+  });
+
   it('ADMIN gets 403', async () => {
     await withToken(app, admin).get('/api/people/p-nowak').expect(403);
   });
