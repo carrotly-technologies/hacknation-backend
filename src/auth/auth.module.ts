@@ -6,6 +6,8 @@ import { CasePolicy } from './case.policy.js';
 import { CredentialsService } from './credentials.service.js';
 import { readJwtSecret } from './jwt-secret.js';
 import { JwtAuth } from './jwt.auth.js';
+import { LoginGovController } from './login-gov.controller.js';
+import { LoginGovService } from './login-gov.service.js';
 import { RolePolicy } from './role.policy.js';
 import { InMemoryUsersRepository } from './users.in-memory.repository.js';
 import { UsersRepository } from './users.repository.js';
@@ -29,11 +31,12 @@ export const AuthenticationRoot = AuthenticationModule.forRootAsync({
 
 @Global()
 @Module({
-  controllers: [AuthController],
+  controllers: [AuthController, LoginGovController],
   providers: [
     // Swap for a database implementation here; nothing else depends on it.
     { provide: UsersRepository, useClass: InMemoryUsersRepository },
     CredentialsService,
+    LoginGovService,
     JwtAuth,
     RolePolicy,
     CasePolicy,

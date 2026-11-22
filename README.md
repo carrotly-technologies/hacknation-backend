@@ -94,8 +94,9 @@ Every route with its summary (Polish), request body schema, error codes and requ
 ## Sign-in, roles and permissions
 
 Every `/api/*` route needs `Authorization: Bearer <token>` (401 without a valid one), except `GET /api/health`,
-`GET /api/config`, `POST /api/auth/login`, Swagger (`/api/swagger`, `/api/swagger.json`) and the document files
-`GET /api/docs/<path>` (public legal texts opened from answer links in a new tab). A route for another role answers 403.
+`GET /api/config`, `POST /api/auth/login`, the three `/api/auth/login-gov*` routes, Swagger (`/api/swagger`,
+`/api/swagger.json`) and the document files `GET /api/docs/<path>` (public legal texts opened from answer links in a
+new tab). A route for another role answers 403.
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:3000/api/auth/login -H 'content-type: application/json' \
@@ -107,6 +108,9 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 | ---------------------------- | ------------------------------------------------------------------------------------ |
 | `POST /api/auth/login`       | `{ login, password }` → `{ accessToken, tokenType, expiresIn, user }`; JWT HS256, 8 h |
 | `POST /api/auth/logout`      | No-op (204): tokens are stateless, the client drops its token                        |
+| `POST /api/auth/login-gov/start` | Simulated login.gov.pl: → `{ redirectUrl, state }`; `state` = 32 random bytes (base64url), valid 5 min; `redirectUrl` = `${FRONTEND_URL}/mock-login-gov?state=…` |
+| `POST /api/auth/login-gov/mock-authorize` | The mock identity provider: `{ state, pesel, method: 'profil-zaufany' \| 'mobywatel' \| 'bank' }` → `{ artifact }`, one-time, valid 60 s; one artifact per state; 400 for an unknown or expired state, an invalid PESEL or method |
+| `POST /api/auth/login-gov`   | `{ artifact, state }` → same body as `POST /api/auth/login` (token `method: 'login.gov.pl'`); 400 bad or expired state, 401 used or expired artifact, 401 „Brak konta dla tej osoby.” for an unknown PESEL |
 | `GET /api/me`                | The signed-in user: `{ id, login, name, role, position, unit, officeName }`          |
 | `GET /api/admin/users`       | ADMIN: every account (no password hashes)                                            |
 | `PATCH /api/admin/users/:id` | ADMIN: `{ role }`; 409 for removing your own ADMIN role                              |
@@ -128,6 +132,35 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 - Accounts sit behind `UsersRepository` (`src/auth/users.repository.ts`); the in-memory implementation
   (`users.in-memory.repository.ts`, seed in `users.seed.ts`) is bound in `AuthModule` and can be swapped for a
   database one there. Supervisors are linked to `EVALUATORS` of the case seed by `evaluatorId`.
+
+### Sign-in through login.gov.pl (simulation)
+
+There is no access to Węzeł Krajowy (login.gov.pl) at the hackathon, so the app ships a mock that follows its flow
+(redirect with `state` → one-time artifact → back-channel exchange), not SAML:
+
+1. The frontend calls `POST /api/auth/login-gov/start` and goes to `redirectUrl` (the frontend page
+   `/mock-login-gov`, clearly marked as a simulation, with no official logos).
+2. On the mock page the user picks a method (profil zaufany, aplikacja mObywatel, bankowość elektroniczna) and a demo
+   person; the page calls `POST /api/auth/login-gov/mock-authorize` with that person's fictional PESEL and returns
+   to `/logowanie/login-gov?artifact=…&state=…`.
+3. The return page calls `POST /api/auth/login-gov`: the backend checks the state, burns the artifact (single use,
+   also on failure), finds the account by PESEL (`UsersRepository.findByPesel`) and issues the usual 8 h JWT.
+
+State and artifacts live in process memory (`src/auth/login-gov.service.ts`), expired entries are swept on each call
+and each map is capped at 10 000 entries, so this needs a single instance. PESELs sit only in `users.seed.ts` and are
+never returned by the API.
+
+To replace the mock with the real Węzeł Krajowy:
+
+- register the service (system) with the operator of Węzeł Krajowy (KPRM / COI) and sign the agreement;
+- generate the signing and encryption key pair and certificate, and exchange SAML 2.0 metadata (SP `EntityDescriptor`
+  with the `AssertionConsumerService` URL; the IdP metadata of WK for the chosen environment: test or production);
+- `start` builds a signed `AuthnRequest` (with `RelayState` = state, required LoA) and redirects to WK instead of
+  `/mock-login-gov`; drop `mock-authorize` and the mock page;
+- the exchange sends a signed `ArtifactResolve` (SOAP) for the `SAMLart` artifact, verifies the signature, decrypts the
+  assertion and reads `PersonIdentifier` (PESEL) from it; then a `LogoutRequest` for single logout;
+- keep state and artifacts in a shared store (e.g. the database) when the app runs on more than one instance, and add
+  a PESEL column to the accounts table.
 
 ### Demo accounts (for the jury)
 
