@@ -11,24 +11,29 @@ import {
   type Cell,
   DRAFT_HEADER,
   type Inline,
+  SHEET_FONT_SIZE as SIZE,
   type SheetContent,
 } from './sheet-content.js';
 import { toGrid } from './table-grid.js';
 
-/** Open Sans (SIL OFL 1.1, assets/fonts/OFL.txt): Polish letters in every PDF viewer. */
+/**
+ * Tinos (SIL OFL 1.1, assets/fonts/OFL.txt): metric-compatible with Times New
+ * Roman, which is commercial and cannot be embedded. Polish letters in every PDF viewer.
+ */
 export const FONTS_DIR = resolve(import.meta.dirname, '../../assets/fonts');
 
 const PAGE_WIDTH = 595.28; // A4 in points
-const MARGIN = 48;
+const MARGIN = 56.69; // 2 cm, as in the DOCX
 const CONTENT_WIDTH = PAGE_WIDTH - 2 * MARGIN;
 const HEADER_FILL = '#eeeeee';
 /** Left and right padding plus the border of a table cell, outside its width. */
 const CELL_CHROME = 9;
 
 const FONT_FILES = [
-  'OpenSans-Regular.ttf',
-  'OpenSans-SemiBold.ttf',
-  'OpenSans-Italic.ttf',
+  'Tinos-Regular.ttf',
+  'Tinos-Bold.ttf',
+  'Tinos-Italic.ttf',
+  'Tinos-BoldItalic.ttf',
 ];
 
 let configured = false;
@@ -53,11 +58,11 @@ function configure(): void {
     vfs.writeFileSync(file, readFileSync(resolve(FONTS_DIR, file)));
   }
   pdfmake.setFonts({
-    OpenSans: {
-      normal: 'OpenSans-Regular.ttf',
-      bold: 'OpenSans-SemiBold.ttf',
-      italics: 'OpenSans-Italic.ttf',
-      bolditalics: 'OpenSans-SemiBold.ttf',
+    Tinos: {
+      normal: 'Tinos-Regular.ttf',
+      bold: 'Tinos-Bold.ttf',
+      italics: 'Tinos-Italic.ttf',
+      bolditalics: 'Tinos-BoldItalic.ttf',
     },
   });
   pdfmake.setUrlAccessPolicy(() => false);
@@ -70,16 +75,16 @@ export async function renderSheetPdf(sheet: SheetContent): Promise<Buffer> {
   const doc: TDocumentDefinitions = {
     info: { title: sheet.title, creator: 'Kompas Kompetencji' },
     pageSize: 'A4',
-    pageMargins: [MARGIN, 56, MARGIN, 48],
-    defaultStyle: { font: 'OpenSans', fontSize: 9, lineHeight: 1.15 },
+    pageMargins: [MARGIN, MARGIN, MARGIN, MARGIN],
+    defaultStyle: { font: 'Tinos', fontSize: SIZE.body, lineHeight: 1.15 },
     header: sheet.draft
       ? {
           text: DRAFT_HEADER,
           alignment: 'center',
           bold: true,
           color: '#b00020',
-          fontSize: 10,
-          margin: [MARGIN, 22, MARGIN, 0],
+          fontSize: SIZE.small,
+          margin: [MARGIN, 24, MARGIN, 0],
         }
       : undefined,
     watermark: sheet.draft
@@ -87,15 +92,15 @@ export async function renderSheetPdf(sheet: SheetContent): Promise<Buffer> {
       : undefined,
     footer: (page, pages) => ({
       columns: [
-        { text: sheet.footnote, fontSize: 7, color: '#666666' },
+        { text: sheet.footnote, fontSize: SIZE.footer, color: '#666666' },
         {
           text: `Strona ${page} z ${pages}`,
           alignment: 'right',
-          fontSize: 7,
-          width: 70,
+          fontSize: SIZE.footer,
+          width: 80,
         },
       ],
-      margin: [MARGIN, 12, MARGIN, 0],
+      margin: [MARGIN, 20, MARGIN, 0],
     }),
     content: sheet.blocks.map(toPdf),
   };
@@ -109,20 +114,20 @@ function inline(content: Inline) {
     bold: run.bold,
     italics: run.italic || run.muted,
     color: run.muted ? '#777777' : undefined,
-    fontSize: run.muted ? 7.5 : undefined,
+    fontSize: run.muted ? SIZE.small : undefined,
   }));
 }
 
 function toPdf(block: Block): Content {
   switch (block.kind) {
     case 'annex':
-      return { text: block.text, alignment: 'right', fontSize: 8 };
+      return { text: block.text, alignment: 'right', fontSize: SIZE.small };
     case 'title':
       return {
         stack: block.lines.map((line, i) => ({
           text: line,
           bold: true,
-          fontSize: i === 0 ? 13 : 11,
+          fontSize: i === 0 ? SIZE.title : SIZE.body,
         })),
         alignment: 'center',
         margin: [0, 8, 0, 8],
@@ -131,7 +136,7 @@ function toPdf(block: Block): Content {
       return {
         text: block.text,
         bold: true,
-        fontSize: 11,
+        fontSize: SIZE.title,
         alignment: 'center',
         characterSpacing: 3,
         margin: [0, 6, 0, 6],
@@ -143,7 +148,7 @@ function toPdf(block: Block): Content {
         text: inline(block.content),
         italics: block.italic,
         alignment: block.align ?? 'left',
-        fontSize: block.small ? 7.5 : undefined,
+        fontSize: block.small ? SIZE.small : undefined,
         margin: [0, 2, 0, 2],
       };
     case 'textBox':
@@ -181,13 +186,13 @@ function toPdf(block: Block): Content {
             {
               text: cell.caption,
               italics: true,
-              fontSize: 7,
+              fontSize: SIZE.small,
               alignment: 'center',
             },
           ],
         })),
         columnGap: 10,
-        margin: [0, 10, 0, 10],
+        margin: [0, 6, 0, 6],
         unbreakable: true,
       };
     case 'pageBreak':
@@ -204,6 +209,7 @@ function toPdfCell(cell: Cell | null): TableCell {
     bold: cell.header,
     fillColor: cell.header ? HEADER_FILL : undefined,
     alignment: cell.align,
-    fontSize: cell.small ? 7.5 : undefined,
+    fontSize: cell.small ? SIZE.small : undefined,
+    lineHeight: 1, // single spacing in the form's tables, as in the template
   };
 }

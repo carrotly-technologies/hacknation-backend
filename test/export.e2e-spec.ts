@@ -82,8 +82,13 @@ describe('Sheet files: GET /api/cases/:id/sheet.pdf|docx (e2e)', () => {
     const body = res.body as Buffer;
     expect(body.length).toBeGreaterThan(1000);
     expect(body.subarray(0, 4).toString('latin1')).toBe('%PDF');
-    // Open Sans is embedded (Polish letters do not depend on the viewer).
-    expect(body.toString('latin1')).toContain('OpenSans');
+    // Tinos (metric-compatible with Times New Roman) is embedded, so Polish
+    // letters do not depend on the viewer; a subset font is named XXXXXX+Tinos-*.
+    const pdf = body.toString('latin1');
+    expect(pdf).toMatch(/\/FontName \/[A-Z]{6}\+Tinos-Regular/);
+    expect(pdf).toMatch(/\/FontName \/[A-Z]{6}\+Tinos-Bold/);
+    expect(pdf).toMatch(/\/FontFile2 /);
+    expect(pdf).not.toContain('OpenSans');
   });
 
   it('DOCX of a signed sheet C: a ZIP with word/document.xml and the filled data', async () => {
@@ -100,6 +105,13 @@ describe('Sheet files: GET /api/cases/:id/sheet.pdf|docx (e2e)', () => {
     expect(body.subarray(0, 2).toString('latin1')).toBe('PK');
     const xml = zipEntry(body, 'word/document.xml');
     expect(xml).not.toBeNull();
+    // Times New Roman everywhere: 12 pt text by default, no other font.
+    expect(xml).toContain('w:rFonts w:ascii="Times New Roman"');
+    expect(xml).not.toMatch(/w:ascii="(?!Times New Roman")/);
+    expect(xml).toContain('<w:sz w:val="24"/>');
+    const styles = zipEntry(body, 'word/styles.xml');
+    expect(styles).toContain('w:ascii="Times New Roman"');
+    expect(styles).toContain('<w:sz w:val="24"/>');
     const detail = await withToken(app, supervisor)
       .get('/api/cases/c-006')
       .expect(200);
