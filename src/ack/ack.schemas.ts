@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { OBJECTION_MAX_LENGTH } from '../cases/objection.rules.js';
 
-export const confirmAckSchema = z.object({
+export const confirmAckSchema = z.strictObject({
   confirmed: z.literal(true, {
     error:
       'Zaznacz potwierdzenie, że przeprowadzono z Tobą rozmowę oceniającą i zapoznałeś(-łaś) się z oceną.',
@@ -9,7 +9,7 @@ export const confirmAckSchema = z.object({
 });
 export type ConfirmAckInput = z.infer<typeof confirmAckSchema>;
 
-export const objectionSchema = z.object({
+export const objectionSchema = z.strictObject({
   text: z
     .string({ error: 'Wpisz treść zastrzeżeń.' })
     .trim()

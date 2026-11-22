@@ -21,6 +21,7 @@ import { MonitorModule } from './monitor/monitor.module.js';
 import { OspModule } from './osp/osp.module.js';
 import { PeopleModule } from './people/people.module.js';
 import { RetentionModule } from './retention/retention.module.js';
+import { RateLimitModule } from './security/rate-limit.module.js';
 import { SheetsModule } from './sheets/sheets.module.js';
 
 @Module({
@@ -30,6 +31,8 @@ import { SheetsModule } from './sheets/sheets.module.js';
     // Guard order: authentication (sets the user) before authorization.
     AuthenticationRoot,
     AuthorizationModule.forRoot(),
+    // After authentication: limits count per signed-in account.
+    RateLimitModule,
     AuthModule,
     // Global audit interceptor and middleware (src/audit): every data change and sign-in.
     AuditModule,

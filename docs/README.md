@@ -6,6 +6,7 @@ Oryginały leżą w podkatalogach tematycznych, a `tekst/` ma ich wersje tekstow
 do czytania przez agentów i jako baza wiedzy asystenta AI.
 
 Dokumentacja RODO aplikacji (rejestr czynności przetwarzania, DPIA, polityka retencji): [`rodo/`](rodo/).
+Bezpieczeństwo aplikacji: checklista OWASP ASVS 4.0 poziom 2 (V1–V14) ze statusem i ścieżkami do kodu: [`security/asvs-l2.md`](security/asvs-l2.md).
 
 ## Zadanie
 

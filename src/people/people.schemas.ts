@@ -7,7 +7,7 @@ z.config(z.locales.pl());
 const text = (error: string) => z.string({ error }).trim().min(1, { error });
 
 /** PATCH /api/people/:personId: the basic employee data, all required. */
-export const updatePersonSchema = z.object({
+export const updatePersonSchema = z.strictObject({
   position: text('Podaj stanowisko.'),
   unit: text('Podaj komórkę organizacyjną.'),
   employment: z.enum(['URZEDNIK', 'PRACOWNIK'], {

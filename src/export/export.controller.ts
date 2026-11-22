@@ -10,6 +10,7 @@ import {
 import { Roles } from '../auth/roles.decorator.js';
 import { ExportService, type SheetFile } from './export.service.js';
 import type { SheetFormat } from './sheet-filename.js';
+import { idParam } from '../security/params.schemas.js';
 
 /** The filled periodic sheet to download or print: who may read the case may download it. */
 @ApiTags('export')
@@ -33,7 +34,7 @@ export class ExportController {
     description: 'Plik PDF.',
     schema: { type: 'string', format: 'binary' },
   })
-  pdf(@Param('id') id: string): Promise<StreamableFile> {
+  pdf(@Param('id', { schema: idParam }) id: string): Promise<StreamableFile> {
     return this.file(id, 'pdf');
   }
 
@@ -47,7 +48,7 @@ export class ExportController {
     description: 'Plik DOCX.',
     schema: { type: 'string', format: 'binary' },
   })
-  docx(@Param('id') id: string): Promise<StreamableFile> {
+  docx(@Param('id', { schema: idParam }) id: string): Promise<StreamableFile> {
     return this.file(id, 'docx');
   }
 

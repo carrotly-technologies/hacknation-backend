@@ -20,6 +20,7 @@ import { MonitorTokenGuard } from './monitor-token.guard.js';
 import { type SessionsQuery, sessionsQuerySchema } from './monitor.schemas.js';
 import { MonitorService } from './monitor.service.js';
 import type { SessionDetail, SessionPage } from './monitor.types.js';
+import { idParam } from '../security/params.schemas.js';
 
 /** Activity of the app's users for the team (page /aktywnosc of the frontend). */
 @ApiTags('monitor')
@@ -72,7 +73,9 @@ export class MonitorController {
   @ApiOkResponse({
     description: '`{ session, entries }`, wpisy od najstarszego.',
   })
-  session(@Param('sessionId') sessionId: string): Promise<SessionDetail> {
+  session(
+    @Param('sessionId', { schema: idParam }) sessionId: string,
+  ): Promise<SessionDetail> {
     return this.monitor.session(sessionId);
   }
 }

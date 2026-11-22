@@ -18,6 +18,9 @@ export abstract class UsersRepository {
   /** The account of this PESEL (login.gov.pl sign-in), or null. */
   abstract findByPesel(pesel: string): Promise<User | null>;
   abstract list(): Promise<User[]>;
-  /** The updated user, or null when there is no such user. */
+  /**
+   * The updated user, or null when there is no such user. A different role
+   * raises `tokenVersion`, which ends the user's sessions.
+   */
   abstract updateRole(id: string, role: Role): Promise<User | null>;
 }

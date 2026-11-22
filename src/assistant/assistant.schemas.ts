@@ -11,13 +11,13 @@ const historyText = z
   .transform((s) => s.slice(0, HISTORY_FIELD_MAX));
 
 export const historySchema = z
-  .array(z.object({ question: historyText, answer: historyText }))
+  .array(z.strictObject({ question: historyText, answer: historyText }))
   .max(50)
   // Only the last exchanges are used; empty questions are dropped.
   .transform((h) => h.filter((x) => x.question).slice(-MAX_HISTORY));
 export type ChatHistory = z.infer<typeof historySchema>;
 
-export const askSchema = z.object({
+export const askSchema = z.strictObject({
   question: z.string().trim().min(3).max(2000),
   /**
    * Deprecated and ignored: there is one assistant now. Still accepted (and

@@ -4,7 +4,7 @@ import { PATH_MAX } from './monitor.rules.js';
 // Zod's own messages in Polish (also set in cases.schemas.ts).
 z.config(z.locales.pl());
 
-export const pageviewSchema = z.object({
+export const pageviewSchema = z.strictObject({
   path: z
     .string({ error: 'Podaj ścieżkę strony.' })
     .trim()
@@ -35,7 +35,7 @@ const moment = (end: boolean) =>
         : new Date(v).toISOString(),
     );
 
-export const sessionsQuerySchema = z.object({
+export const sessionsQuerySchema = z.strictObject({
   from: moment(false).optional(),
   to: moment(true).optional(),
   ip: z.string().trim().max(100).optional(),

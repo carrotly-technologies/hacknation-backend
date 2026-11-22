@@ -31,6 +31,7 @@ import {
 } from './cases.schemas.js';
 import { DemoReset } from '../demo/demo-reset.service.js';
 import { CasesService } from './cases.service.js';
+import { idParam } from '../security/params.schemas.js';
 
 @Controller()
 export class CasesController {
@@ -98,7 +99,7 @@ export class CasesController {
   @ApiNotFoundResponse({
     description: 'Nie ma takiej sprawy (albo jest niedostępna).',
   })
-  findOne(@Param('id') id: string): Promise<CaseDetail> {
+  findOne(@Param('id', { schema: idParam }) id: string): Promise<CaseDetail> {
     return this.cases.view(id);
   }
 
@@ -112,7 +113,7 @@ export class CasesController {
   @ApiNotFoundResponse({ description: 'Nie ma takiej sprawy.' })
   @ApiConflictResponse({ description: 'Część zablokowana na bieżącym etapie.' })
   patch(
-    @Param('id') id: string,
+    @Param('id', { schema: idParam }) id: string,
     @Body({ schema: patchCaseSchema }) body: PatchCase,
   ): Promise<CaseDetail> {
     return this.cases.patch(id, body);
@@ -130,7 +131,7 @@ export class CasesController {
     description: 'Obserwacje zablokowane na bieżącym etapie.',
   })
   addObservation(
-    @Param('id') id: string,
+    @Param('id', { schema: idParam }) id: string,
     @Body({ schema: observationSchema }) body: ObservationInput,
   ): Promise<CaseDetail> {
     return this.cases.addObservation(id, body);
@@ -151,7 +152,7 @@ export class CasesController {
       'Akcja niedozwolona na bieżącym etapie (z wyjaśnieniem po polsku).',
   })
   action(
-    @Param('id') id: string,
+    @Param('id', { schema: idParam }) id: string,
     @Body({ schema: actionSchema }) body: ActionInput,
   ): Promise<CaseDetail> {
     return this.cases.action(id, body.action as CaseAction, {

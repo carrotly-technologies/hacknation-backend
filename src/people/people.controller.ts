@@ -9,6 +9,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { type UpdatePerson, updatePersonSchema } from './people.schemas.js';
 import { PeopleService } from './people.service.js';
 import type { PersonProfile } from './people.types.js';
+import { idParam } from '../security/params.schemas.js';
 
 @ApiTags('people')
 @ApiNotFoundResponse({
@@ -26,7 +27,9 @@ export class PeopleController {
       'Profil pracownika: dane, przełożony, historia ocen, bieżąca sprawa',
   })
   @ApiOkResponse({ description: 'Profil (`PersonProfile`).' })
-  profile(@Param('personId') personId: string): Promise<PersonProfile> {
+  profile(
+    @Param('personId', { schema: idParam }) personId: string,
+  ): Promise<PersonProfile> {
     return this.people.profile(personId);
   }
 
@@ -38,7 +41,7 @@ export class PeopleController {
   })
   @ApiOkResponse({ description: 'Profil po zmianie (`PersonProfile`).' })
   update(
-    @Param('personId') personId: string,
+    @Param('personId', { schema: idParam }) personId: string,
     @Body({ schema: updatePersonSchema }) body: UpdatePerson,
   ): Promise<PersonProfile> {
     return this.people.update(personId, body);

@@ -17,9 +17,14 @@ import {
   type LoginGovExchangeInput,
   loginGovExchangeSchema,
 } from './auth.schemas.js';
+import { LoginRateLimit } from '../security/rate-limit.decorator.js';
+import { TOKEN_VERSION_CLAIM } from './jwt.auth.js';
 import { LoginGovService } from './login-gov.service.js';
 import { USER_VIEW_SCHEMA } from './user.openapi.js';
 import { toUserView } from './user.types.js';
+
+const TOO_MANY_LOGINS =
+  'Zbyt wiele prób logowania. Spróbuj ponownie za minutę.';
 
 /** Frontend page of the simulated identity provider. */
 export const MOCK_LOGIN_GOV_PATH = '/mock-login-gov';
@@ -67,6 +72,7 @@ export class LoginGovController {
 
   /** The mock identity provider. A real one never runs in this app. */
   @Post('mock-authorize')
+  @LoginRateLimit(TOO_MANY_LOGINS)
   @HttpCode(200)
   @ApiOperation({
     summary:
@@ -99,6 +105,7 @@ export class LoginGovController {
 
   /** Same answer as POST /api/auth/login. */
   @Post()
+  @LoginRateLimit(TOO_MANY_LOGINS)
   @HttpCode(200)
   @ApiOperation({
     summary: 'Symulacja login.gov.pl: wymiana artefaktu na token Bearer',
@@ -143,6 +150,7 @@ export class LoginGovController {
     }
     const { accessToken, expiresIn } = await this.tokens.issue(user.id, {
       method: 'login.gov.pl',
+      claims: { [TOKEN_VERSION_CLAIM]: user.tokenVersion },
     });
     await this.audit.record({
       actorId: user.id,

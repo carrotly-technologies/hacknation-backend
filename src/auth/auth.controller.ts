@@ -6,17 +6,28 @@ import {
   Post,
   UnauthorizedException,
 } from '@nestjs/common';
-import { Public, TokenService } from '@nestjs/authentication';
+import {
+  Authenticate,
+  CurrentSession,
+  type JwtClaims,
+  Public,
+  TokenService,
+} from '@nestjs/authentication';
+import { Can } from '@nestjs/authorization';
 import {
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
 import { AuditService } from '../audit/audit.service.js';
+import { LoginRateLimit } from '../security/rate-limit.decorator.js';
 import { type LoginInput, loginSchema } from './auth.schemas.js';
 import { CredentialsService } from './credentials.service.js';
+import { TOKEN_VERSION_CLAIM } from './jwt.auth.js';
+import { RevokedTokens } from './revoked-tokens.service.js';
 import { USER_VIEW_SCHEMA } from './user.openapi.js';
 import { toUserView, type UserView } from './user.types.js';
 import { UsersRepository } from './users.repository.js';
@@ -30,7 +41,6 @@ export interface LoginResponse {
 }
 
 @ApiTags('auth')
-@Public()
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -38,6 +48,7 @@ export class AuthController {
     private readonly tokens: TokenService,
     private readonly users: UsersRepository,
     private readonly audit: AuditService,
+    private readonly revoked: RevokedTokens,
   ) {}
 
   /**
@@ -45,6 +56,8 @@ export class AuthController {
    * id, never the login typed or the password.
    */
   @Post('login')
+  @Public()
+  @LoginRateLimit('Zbyt wiele prób logowania. Spróbuj ponownie za minutę.')
   @HttpCode(200)
   @ApiOperation({
     summary: 'Logowanie loginem i hasłem: zwraca token Bearer (JWT, 8 h)',
@@ -63,6 +76,10 @@ export class AuthController {
     },
   })
   @ApiUnauthorizedResponse({ description: 'Nieprawidłowy login lub hasło.' })
+  @ApiTooManyRequestsResponse({
+    description:
+      'Zbyt wiele prób logowania z jednego adresu IP w ciągu minuty.',
+  })
   async login(
     @Body({ schema: loginSchema }) body: LoginInput,
     @Ip() ip: string,
@@ -85,6 +102,7 @@ export class AuthController {
     }
     const { accessToken, expiresIn } = await this.tokens.issue(user.id, {
       method: 'password',
+      claims: { [TOKEN_VERSION_CLAIM]: user.tokenVersion },
     });
     await this.audit.record({
       actorId: user.id,
@@ -104,12 +122,22 @@ export class AuthController {
     };
   }
 
-  /** Tokens are stateless: the client drops its token. Kept for symmetry. */
+  /**
+   * Ends the session of the token sent with it: the token is refused from now
+   * on, even before it expires. Without a token it does nothing (204).
+   */
   @Post('logout')
+  @Authenticate({ optional: true })
+  @Can.Anyone()
   @HttpCode(204)
   @ApiOperation({
-    summary: 'Wylogowanie (bez skutku po stronie serwera: klient usuwa token)',
+    summary:
+      'Wylogowanie: wysłany token przestaje działać (bez tokenu nic nie robi)',
   })
   @ApiNoContentResponse({ description: 'Wylogowano.' })
-  logout(): void {}
+  logout(@CurrentSession() session: JwtClaims | null): void {
+    if (session?.jti && session.exp) {
+      this.revoked.revoke(session.jti, session.exp);
+    }
+  }
 }

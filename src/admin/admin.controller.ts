@@ -20,6 +20,7 @@ import { Roles } from '../auth/roles.decorator.js';
 import { toUserView, type User, type UserView } from '../auth/user.types.js';
 import { UsersRepository } from '../auth/users.repository.js';
 import { type UpdateUserInput, updateUserSchema } from './admin.schemas.js';
+import { idParam } from '../security/params.schemas.js';
 
 @ApiTags('admin')
 @Controller('admin/users')
@@ -47,7 +48,7 @@ export class AdminController {
   })
   async update(
     @CurrentUser() me: User,
-    @Param('id') id: string,
+    @Param('id', { schema: idParam }) id: string,
     @Body({ schema: updateUserSchema }) body: UpdateUserInput,
   ): Promise<UserView> {
     if (id === me.id && body.role !== 'ADMIN') {

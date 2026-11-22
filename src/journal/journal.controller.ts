@@ -26,6 +26,7 @@ import {
   observationSchema,
 } from './journal.schemas.js';
 import { JournalService } from './journal.service.js';
+import { idParam } from '../security/params.schemas.js';
 
 /** Private journal of a supervisor; HR and ADMIN have no access. */
 @ApiTags('journal')
@@ -38,7 +39,7 @@ export class JournalController {
   @ApiOperation({ summary: 'Moje notatki o pracowniku' })
   @ApiOkResponse({ description: 'Notatki.' })
   @ApiNotFoundResponse({ description: 'Nieznany pracownik.' })
-  listNotes(@Param('personId') personId: string) {
+  listNotes(@Param('personId', { schema: idParam }) personId: string) {
     return this.journal.listNotes(personId);
   }
 
@@ -47,7 +48,7 @@ export class JournalController {
   @ApiCreatedResponse({ description: 'Notatka.' })
   @ApiNotFoundResponse({ description: 'Nieznany pracownik.' })
   addNote(
-    @Param('personId') personId: string,
+    @Param('personId', { schema: idParam }) personId: string,
     @Body({ schema: noteSchema }) body: NoteInput,
   ) {
     return this.journal.addNote(personId, body);
@@ -58,7 +59,7 @@ export class JournalController {
   @ApiOkResponse({ description: 'Notatka z nowym `updatedAt`.' })
   @ApiNotFoundResponse({ description: 'Nie ma takiej notatki.' })
   updateNote(
-    @Param('id') id: string,
+    @Param('id', { schema: idParam }) id: string,
     @Body({ schema: noteSchema }) body: NoteInput,
   ) {
     return this.journal.updateNote(id, body);
@@ -69,7 +70,9 @@ export class JournalController {
   @ApiOperation({ summary: 'Usunięcie notatki' })
   @ApiNoContentResponse({ description: 'Usunięto.' })
   @ApiNotFoundResponse({ description: 'Nie ma takiej notatki.' })
-  async deleteNote(@Param('id') id: string): Promise<void> {
+  async deleteNote(
+    @Param('id', { schema: idParam }) id: string,
+  ): Promise<void> {
     await this.journal.deleteNote(id);
   }
 
@@ -77,7 +80,7 @@ export class JournalController {
   @ApiOperation({ summary: 'Moje obserwacje S-D-R o pracowniku' })
   @ApiOkResponse({ description: 'Obserwacje według daty.' })
   @ApiNotFoundResponse({ description: 'Nieznany pracownik.' })
-  listObservations(@Param('personId') personId: string) {
+  listObservations(@Param('personId', { schema: idParam }) personId: string) {
     return this.journal.listObservations(personId);
   }
 
@@ -86,7 +89,7 @@ export class JournalController {
   @ApiCreatedResponse({ description: 'Obserwacja.' })
   @ApiNotFoundResponse({ description: 'Nieznany pracownik.' })
   addObservation(
-    @Param('personId') personId: string,
+    @Param('personId', { schema: idParam }) personId: string,
     @Body({ schema: observationSchema }) body: JournalObservationInput,
   ) {
     return this.journal.addObservation(personId, body);
@@ -97,7 +100,7 @@ export class JournalController {
   @ApiOkResponse({ description: 'Obserwacja po zmianie.' })
   @ApiNotFoundResponse({ description: 'Nie ma takiej obserwacji.' })
   updateObservation(
-    @Param('id') id: string,
+    @Param('id', { schema: idParam }) id: string,
     @Body({ schema: observationPatchSchema }) body: JournalObservationPatch,
   ) {
     return this.journal.updateObservation(id, body);
@@ -108,7 +111,9 @@ export class JournalController {
   @ApiOperation({ summary: 'Usunięcie obserwacji' })
   @ApiNoContentResponse({ description: 'Usunięto.' })
   @ApiNotFoundResponse({ description: 'Nie ma takiej obserwacji.' })
-  async deleteObservation(@Param('id') id: string): Promise<void> {
+  async deleteObservation(
+    @Param('id', { schema: idParam }) id: string,
+  ): Promise<void> {
     await this.journal.deleteObservation(id);
   }
 }

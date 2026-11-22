@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const loginSchema = z.object({
+export const loginSchema = z.strictObject({
   login: z
     .string({ error: 'Podaj login.' })
     .trim()
@@ -38,7 +38,7 @@ const opaqueToken = (message: string) =>
 const STATE_ERROR =
   'Sesja logowania przez login.gov.pl jest nieprawidłowa. Zacznij logowanie od nowa.';
 
-export const loginGovAuthorizeSchema = z.object({
+export const loginGovAuthorizeSchema = z.strictObject({
   state: opaqueToken(STATE_ERROR),
   pesel: z
     .string({ error: 'Podaj numer PESEL.' })
@@ -49,7 +49,7 @@ export const loginGovAuthorizeSchema = z.object({
 });
 export type LoginGovAuthorizeInput = z.infer<typeof loginGovAuthorizeSchema>;
 
-export const loginGovExchangeSchema = z.object({
+export const loginGovExchangeSchema = z.strictObject({
   artifact: opaqueToken(
     'Link logowania jest nieprawidłowy. Zaloguj się ponownie.',
   ),
