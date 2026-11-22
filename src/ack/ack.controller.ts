@@ -1,5 +1,15 @@
 import { Public } from '@nestjs/authentication';
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+} from '@nestjs/common';
+import type { Request } from 'express';
+import { setAuditResourceId } from '../audit/audit-request.js';
 import {
   ApiConflictResponse,
   ApiNotFoundResponse,
@@ -55,7 +65,10 @@ export class AckController {
   confirm(
     @Param('token') token: string,
     @Body({ schema: confirmAckSchema }) _body: ConfirmAckInput,
+    @Req() req: Request,
   ): AckDone {
+    // The event log names the case, never the token.
+    setAuditResourceId(req, this.ack.caseIdOf(token));
     return this.ack.confirm(token);
   }
 
@@ -73,7 +86,9 @@ export class AckController {
   object(
     @Param('token') token: string,
     @Body({ schema: objectionSchema }) body: ObjectionInput,
+    @Req() req: Request,
   ): AckDone {
+    setAuditResourceId(req, this.ack.caseIdOf(token));
     return this.ack.object(token, body.text);
   }
 }
