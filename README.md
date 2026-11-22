@@ -3,6 +3,8 @@
 NestJS API for HackNation. The React frontend lives in
 [hacknation-frontend](https://github.com/carrotly-technologies/hacknation-frontend).
 
+Submission docs (Polish: project description, use of AI, architecture, HackTribe texts): [`docs/zgloszenie/`](docs/zgloszenie/).
+
 ## Setup
 
 ```bash
@@ -94,7 +96,8 @@ All people are fictional.
 
 ## API
 
-Contract: `notatki/api-kontrakt-v1.md`. Static data and pure functions.
+Static data and pure functions. The route tables in this README are the API contract (request bodies validated by
+the zod schemas in `src/**/*.schemas.ts`).
 | Route                                 | What it does                                                                                       |
 | ------------------------------------- | -------------------------------------------------------------------------------------------------- |
 | `GET /api/competency-model`           | 14 competencies, 49 indicators with level descriptions, scale 1/3/5/7/9, instructions (Polish)     |
@@ -119,7 +122,7 @@ curl -X POST localhost:3000/api/assessments/evaluate -H 'content-type: applicati
 
 ### v2: assessment cases (in-memory demo)
 
-Contract: `notatki/api-kontrakt-v2.md`. Cases live in memory, seeded on startup (and on `POST /api/demo/reset`) with
+Cases live in memory, seeded on startup (and on `POST /api/demo/reset`) with
 fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadline is computed against that date.
 
 | Route                            | What it does                                                                             |
