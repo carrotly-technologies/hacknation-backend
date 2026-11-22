@@ -55,4 +55,6 @@ export interface PersonProfile {
   history: HistoryItem[];
   currentCase: { id: string; path: Path; currentStage: StageId } | null;
   nextAssessment: NextAssessment;
+  /** POST /api/cases would start a new case now (new-case.rules). */
+  canStartCase: boolean;
 }

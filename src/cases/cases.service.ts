@@ -25,6 +25,8 @@ import { toDetail, toSummary } from './case-view.js';
 import type { ObservationInput, PatchCase } from './cases.schemas.js';
 import { formatDatePl } from './dates.js';
 import { describeDaysLeft } from './deadlines.rules.js';
+import { caseStatus } from './stages.rules.js';
+import { buildNewCase } from './new-case.rules.js';
 import { addObservation, applyPatch } from './patch.rules.js';
 import { OFFICE_NAME } from './seed/seed.data.js';
 
@@ -165,6 +167,43 @@ export class CasesService {
     return this.detail(id, true);
   }
 
+  /**
+   * POST /api/cases: a new case for a person, from their latest case (path,
+   * cycle start and first stage in new-case.rules). 404 for an unknown person
+   * or one the caller may not see, 409 while a case is still open.
+   */
+  async create(personId: string): Promise<CaseDetail> {
+    const user = this.auth.requireUser();
+    const own = this.store
+      .all()
+      .filter((r) => r.person.id === personId)
+      .sort(
+        (a, b) =>
+          cycleAnchor(b).localeCompare(cycleAnchor(a)) ||
+          b.id.localeCompare(a.id),
+      );
+    const latest = own[0];
+    if (
+      !latest ||
+      !(await this.authorization.can(CasePolicy, 'create', user, latest))
+    )
+      throw new NotFoundException(`Nie znaleziono pracownika „${personId}”.`);
+    // An unfinished case blocks a new one, even if an older cycle is newest.
+    const open = own.find((r) => caseStatus(r, this.today) !== 'ZAKONCZONA');
+    const id = this.store.nextCaseId();
+    const record = this.run(() =>
+      buildNewCase(
+        id,
+        latest.person,
+        latest.evaluatorId,
+        open ?? latest,
+        this.today,
+      ),
+    );
+    this.store.save(record);
+    return this.detail(id, isEvaluator(user, record));
+  }
+
   private authorize(ability: 'view' | 'edit', record: CaseRecord) {
     return this.authorization.authorize(
       CasePolicy,
@@ -231,6 +270,13 @@ export class CasesService {
       throw error;
     }
   }
+}
+
+/** Date the case's cycle starts from: hiring or the previous assessment. */
+function cycleAnchor(record: CaseRecord): string {
+  return record.cycleStart.kind === 'HIRED'
+    ? record.cycleStart.date
+    : record.cycleStart.assessedOn;
 }
 
 function isEvaluator(user: User, record: CaseRecord): boolean {

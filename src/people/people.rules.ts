@@ -1,6 +1,7 @@
 import { computeEvaluation, effectiveStage } from '../cases/case.rules.js';
 import type { CaseRecord, Evaluator } from '../cases/case.types.js';
 import { caseStatus, cycleLabel } from '../cases/stages.rules.js';
+import { canStartNewCase } from '../cases/new-case.rules.js';
 import { findOsp } from '../osp/osp.data.js';
 import type {
   ExternalHistoryEntry,
@@ -103,5 +104,6 @@ export function buildProfile(
         }
       : null,
     nextAssessment: nextAssessment(current),
+    canStartCase: canStartNewCase(latest.person, latest, today),
   };
 }

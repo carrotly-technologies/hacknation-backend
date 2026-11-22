@@ -85,6 +85,7 @@ describe('People: employee profile (e2e)', () => {
         currentStage: 'ASSESSMENT',
       },
       nextAssessment: 'OKRESOWA',
+      canStartCase: false,
     });
   });
 

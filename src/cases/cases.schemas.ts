@@ -29,6 +29,12 @@ const grade = (what: string) =>
     .nullable()
     .optional();
 
+/** POST /cases: a new assessment case for a person. */
+export const createCaseSchema = z.object({
+  personId: z.string().trim().min(1, { error: 'Wskaż pracownika (personId).' }),
+});
+export type CreateCase = z.infer<typeof createCaseSchema>;
+
 /** Longest motivation of the request in part III. */
 const MOTIVATION_MAX = 4000;
 

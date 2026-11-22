@@ -42,6 +42,15 @@ export class CaseStore {
     this.cases.set(record.id, record);
   }
 
+  /** Next free id in the seed's pattern (c-001, c-002, …). */
+  nextCaseId(): string {
+    const max = Math.max(
+      0,
+      ...this.all().map((c) => Number(/^c-(\d+)$/.exec(c.id)?.[1] ?? 0)),
+    );
+    return `c-${String(max + 1).padStart(3, '0')}`;
+  }
+
   evaluator(id: string): Evaluator {
     const evaluator = EVALUATORS.find((e) => e.id === id);
     if (!evaluator) throw new Error(`Unknown evaluator ${id}`);

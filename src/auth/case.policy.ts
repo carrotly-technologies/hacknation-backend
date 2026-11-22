@@ -11,6 +11,15 @@ export class CasePolicy {
     return isOwnCase(user, record);
   }
 
+  /**
+   * A new case for the person of `latest`: their supervisor (the evaluator of
+   * the latest case) or HR.
+   */
+  create(user: User | null, latest: CaseRecord): boolean {
+    if (user?.role === 'HR') return true;
+    return isOwnCase(user, latest);
+  }
+
   /** Only the case's evaluator edits it (PATCH, observations, actions). */
   edit(user: User | null, record: CaseRecord): boolean {
     return isOwnCase(user, record);
