@@ -21,9 +21,8 @@ pushu na `main`, przy każdym PR i raz w tygodniu. Wyniki są w zakładce
 | obraz (npm w `node:24-alpine`) | `brace-expansion` 5.0.9 | CVE-2026-102276, CVE-2026-102278 | HIGH | jak wyżej |
 | obraz (Alpine) | pakiety systemowe | – | – | `apk upgrade --no-cache` w warstwie runtime, żeby obraz miał poprawki Alpine wydane po obrazie bazowym |
 
-Przy okazji `package-lock.json` został zsynchronizowany z `package.json` (brakowało w nim
-`@emnapi/core` i `@emnapi/runtime` 2.0.0-beta.2, opcjonalnych zależności deweloperskich), bo bez
-tego `npm ci` w `Dockerfile` i w CI kończyło się błędem.
+`package-lock.json` zsynchronizowany z `package.json` w #83 (brakowało `@emnapi/core` i
+`@emnapi/runtime`), bez czego `npm ci` w `Dockerfile` i w CI kończyło się błędem.
 
 ## Otwarte podatności (bez poprawki)
 
