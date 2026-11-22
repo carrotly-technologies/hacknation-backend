@@ -7,6 +7,12 @@ export const DEFAULT_FRONTEND_URL = 'http://localhost:5173';
 /** Shared app setup, used by main.ts and the e2e tests. */
 export function configureApp(app: INestApplication): void {
   const config = app.get(ConfigService);
+  // Behind the proxy (Coolify): the client's address is the first one of
+  // X-Forwarded-For (activity log, src/monitor).
+  const http = app.getHttpAdapter().getInstance() as {
+    set?: (key: string, value: unknown) => void;
+  };
+  http.set?.('trust proxy', true);
   app.setGlobalPrefix('api');
   app.useGlobalPipes(new StandardSchemaValidationPipe());
   app.enableCors({

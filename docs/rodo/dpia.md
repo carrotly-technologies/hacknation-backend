@@ -66,7 +66,7 @@ tego repozytorium; urząd uzupełnia go o swoje środowisko (hosting, kopie zapa
 | R4 | Szyfrowanie po stronie aplikacji AES-256-GCM pól wolnego tekstu (notatki, obserwacje S-D-R) kluczem `DATA_ENCRYPTION_KEY` spoza bazy: zrzut bazy lub kopia zapasowa nie ujawnia ich treści; hasła jako scrypt | szyfrowanie dysku i kopii zapasowych (poza zakresem aplikacji), klucz w menedżerze sekretów, dostęp do bazy tylko z sieci aplikacji | niskie |
 | R5 | HSTS (`max-age=31536000; includeSubDomains`) w nginx frontendu; API tylko za proxy | TLS 1.2+ na proxy (rozdz. 5) | niskie |
 | R6 | Retencja: anonimizacja spraw i usuwanie wpisów dziennika po `RETENTION_YEARS`, przy starcie, co 24 h i `npm run retention` | ustalenie okresu z IOD, kontrola wyniku w logu | niskie |
-| R7 | Logi zawierają tylko liczby i komunikaty techniczne (retencja, migracje), nigdy treść wpisów ani nazwiska; do LLM bez imienia i nazwiska; LLM opcjonalny, może działać lokalnie (Ollama) | wybór dostawcy LLM z UE/EOG i umowa powierzenia albo model lokalny | niskie |
+| R7 | Logi zawierają tylko liczby i komunikaty techniczne (retencja, migracje), nigdy treść wpisów ani nazwiska; dziennik aktywności (`src/monitor`) ma tylko IP, przeglądarkę, login, ścieżki i statusy (bez treści żądań i tokenów linków), jest kasowany po 30 dniach i dostępny tylko z `MONITOR_TOKEN`; do LLM bez imienia i nazwiska; LLM opcjonalny, może działać lokalnie (Ollama) | wybór dostawcy LLM z UE/EOG i umowa powierzenia albo model lokalny | niskie |
 
 Ryzyko rezydualne jest niskie, więc konsultacja z Prezesem UODO (art. 36 RODO) nie jest wymagana. Ocenę należy powtórzyć
 przy zmianie zakresu danych, dodaniu integracji (EZD, system kadrowy) albo zewnętrznego modelu językowego.

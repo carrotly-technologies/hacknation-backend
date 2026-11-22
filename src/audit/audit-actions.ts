@@ -60,6 +60,8 @@ export const AUDITED_ROUTES: Readonly<Record<string, RouteSpec>> = {
   'POST /auth/login-gov/start': 'SKIP',
   'POST /auth/login-gov/mock-authorize': 'SKIP',
   'POST /auth/login-gov': 'EXPLICIT',
+  // A pageview only feeds the activity log (src/monitor); it changes no data.
+  'POST /telemetry/pageview': 'SKIP',
   'POST /assessments/suggest-level': 'SKIP',
   'POST /assessments/evaluate': 'SKIP',
   'POST /assistant/ask': 'SKIP',

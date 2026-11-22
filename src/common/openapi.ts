@@ -36,6 +36,8 @@ const TAGS: ReadonlyArray<[name: string, description: string]> = [
   ['civil-service-grades', 'Stopnie służbowe I–IX'],
   ['osp', 'Opisy stanowisk pracy (OSP)'],
   ['demo', 'Narzędzia demo'],
+  ['telemetry', 'Odsłony stron frontendu (dziennik aktywności)'],
+  ['monitor', 'Podgląd aktywności użytkowników (tylko z X-Monitor-Token)'],
   ['config', 'Konfiguracja dla frontendu'],
   ['health', 'Stan aplikacji'],
 ];

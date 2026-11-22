@@ -22,6 +22,7 @@ cp .env.example .env   # optional, defaults work out of the box
 | `OFFICE_PLACE`      | `Warszawa` (demo)       | "miejscowość" printed next to signature dates in the downloaded sheet (PDF/DOCX) |
 | `DATA_ENCRYPTION_KEY` | dev-only default      | AES-256-GCM key for free text stored in PostgreSQL (32 bytes base64: `openssl rand -base64 32`); without it a warning is logged. Set it in production and keep it outside the database |
 | `RETENTION_YEARS`   | `10`                    | Cases that ended (and journal entries) more than this many years ago are anonymized / deleted |
+| `MONITOR_TOKEN`     | (unset)                 | Secret of the activity monitor (`X-Monitor-Token`, frontend `/aktywnosc`); unset = `/api/monitor/*` answers 404 |
 
 ### Database (optional)
 
@@ -380,6 +381,34 @@ checks in the app (`/admin/dziennik` in the frontend). Reads are not logged.
 - The assistant is always on: there is no feature flag (without an LLM it answers extractively).
   `GET /api/config` stays for older frontends and always returns `{ "features": { "assistant": true } }`.
 - `npm run eval:assistant`: hit@5 of the 72 Q&A questions against their expected sources.
+
+### Activity monitor (who uses the app)
+
+`src/monitor` logs every `/api/*` call and every screen of the frontend into `request_log` (PostgreSQL with
+`DATABASE_URL`, else in memory, at most 50 000 entries), so the team can see whether and how the prototype is used.
+
+- Each entry: `at`, `sessionId` (`X-Session-Id`, a UUID the frontend keeps per tab in `sessionStorage`; anything else
+  is stored as `null`), `kind` (`API` / `PAGEVIEW`), `method`, `path` (with the query), `status`, `durationMs`, `ip`
+  (first `X-Forwarded-For` address, `trust proxy` is on), `userAgent`, `userId` and `userName` (the account's login,
+  not the person's name) of the signed-in account.
+- Never logged: request and response bodies (so no passwords, tokens or assessment content), the `Authorization`
+  header, the token of the assessed person's link (`/api/ack/***`, `/zapoznanie/***`) and secret query values (`code`, `state`, `token`, `pesel`, … → `***`). Not logged at all:
+  `/api/monitor/*`, `/api/health`, Swagger and CORS preflights. A MAC address cannot be known by a web app.
+- The write happens after the response is sent and never changes it; a failed write is only a warning in the log.
+- Retention: entries older than 30 days are deleted at startup and once a day.
+- Calls without a valid `X-Session-Id` (curl, Swagger) are grouped per IP, browser and day as `anon-<day>-<hash>`.
+- No geolocation of IPs (it would need an external service or a licensed database).
+
+| Route                                 | What it does                                                                                       |
+| ------------------------------------- | -------------------------------------------------------------------------------------------------- |
+| `POST /api/telemetry/pageview`        | Public: `{ path }` (starts with `/`, ≤ 500 chars) → 204; the frontend sends it on every route change |
+| `GET /api/monitor/sessions`           | `?from&to` (date or ISO 8601; a date `to` includes the whole day), `?ip` (part of the address), `?userId` (part of the account id or login), `?page` (1…), `?pageSize` (1–200, default 50) → `{ items, total, page, pageSize }`; each `{ sessionId, anonymous, users: [{ id, name }], ips, userAgent, firstAt, lastAt, pageviews, apiCalls, errors }`, latest activity first |
+| `GET /api/monitor/sessions/:sessionId` | `{ session, entries }`: the summary and every entry, oldest first; 404 for an unknown session     |
+
+`/api/monitor/*` needs the header `X-Monitor-Token` equal to `MONITOR_TOKEN` (compared in constant time). Without it,
+with a wrong one, or while `MONITOR_TOKEN` is unset, it answers 404 as if the route did not exist. Demo accounts and
+roles play no part: a signed-in ADMIN gets 404 too. The frontend shows a one-sentence notice about the log in its
+footer.
 
 ## Quality
 
