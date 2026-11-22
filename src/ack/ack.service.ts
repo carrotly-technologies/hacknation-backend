@@ -99,6 +99,14 @@ export class AckService {
     return this.done(next);
   }
 
+  /** The case behind a token, for the event log; null when the token is unknown. */
+  caseIdOf(token: string): string | null {
+    return (
+      this.cases.all().find((r) => ackTokenMatches(r.ackToken, token))?.id ??
+      null
+    );
+  }
+
   private run(fn: () => CaseRecord): CaseRecord {
     try {
       return fn();

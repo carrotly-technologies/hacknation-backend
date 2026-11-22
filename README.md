@@ -110,12 +110,15 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 | `GET /api/me`                | The signed-in user: `{ id, login, name, role, position, unit, officeName }`          |
 | `GET /api/admin/users`       | ADMIN: every account (no password hashes)                                            |
 | `PATCH /api/admin/users/:id` | ADMIN: `{ role }`; 409 for removing your own ADMIN role                              |
+| `GET /api/admin/audit`       | ADMIN: the event log, newest first (see [Audit log](#audit-log-who-what-when))       |
+| `GET /api/admin/audit/verify` | ADMIN: checks the hash chain → `{ ok: true, count }` or `{ ok: false, count, firstBrokenId }` |
+| `GET /api/admin/audit/actions` | ADMIN: every action with its Polish name `[{ action, label }]` (for the filter)    |
 
 | Role         | May                                                                                                   | 403 on                                                    |
 | ------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
 | `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), `GET /api/people/:personId` (own team), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*`, `POST /api/demo/reset` |
 | `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only), `GET /api/people/:personId`                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*`, journal |
-| `ADMIN`      | `/api/admin/*`, `POST /api/demo/reset` (also HR)                                                      | cases, `/api/team`, `/api/hr/*`, journal                  |
+| `ADMIN`      | `/api/admin/*` (users, audit log), `POST /api/demo/reset` (also HR)                                   | cases, `/api/team`, `/api/hr/*`, journal                  |
 | every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP                         | —                                                         |
 
 - The role is read from the account on every request, never from the token: a role changed by an ADMIN applies to
@@ -181,7 +184,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator, last reminder and `objectionSubmittedOn` (date of the objection, „Sprzeciw”, else `null`) |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
 | `POST /api/cases`                | SUPERVISOR (own team) or HR: `{ personId }` → the new case (201). Path, cycle start and first stage from `src/cases/new-case.rules.ts`: after an acknowledged periodic assessment the next periodic cycle (also while the objection term runs), after a positive first assessment a periodic one from hiring on an indefinite contract, without any case the first assessment in the first 12 months. 409 while a case is in progress, 404 for an unknown or foreign person |
-| `POST /api/demo/reset`           | ADMIN/HR: restores the seed (cases and the journal)                                              |
+| `POST /api/demo/reset`           | ADMIN/HR: restores the seed (cases and the journal); the audit log is kept and gets a `DEMO_RESET` entry |
 | `GET /api/people/:personId`      | Employee profile: `{ person, supervisor, osp, history, currentCase, nextAssessment }`. `osp` = `{ title, purpose, mainTasks }` from the job description of the current case (else the latest), or `null` without one. `history` is newest first: `{ source: 'SYSTEM', caseId, path, cycleLabel, status, result, level, signedByEvaluatorOn, acknowledgedOn }` per case (`result` once signed) and last `{ source: 'EXTERNAL', result, level, date }` (the assessment before the system); `currentCase` = `{ id, path, currentStage }` of the newest unfinished case or `null`; `nextAssessment` `OKRESOWA` \| `PIERWSZA`; `canStartCase` = whether `POST /api/cases` would start a new case now. Built from the cases the caller may read; 404 for an unknown person and for someone else's employee |
 | `PATCH /api/people/:personId`    | `{ position, unit, employment: 'URZEDNIK' \| 'PRACOWNIK', hiredOn }` (all required, `hiredOn` not after today) → the profile as in `GET`; updates the person in all their cases. Same access as `GET` (404 otherwise), 400 for an empty field or a future date |
 | `GET /api/cases/:id/sheet.pdf`   | The filled periodic sheet (A/B/C, parts I–III) as a PDF (Tinos, metric-compatible with Times New Roman, embedded); who may read the case may download it (403/404 as `GET /api/cases/:id`, 409 for the first assessment) |
@@ -261,6 +264,53 @@ author only (someone else's entry: 404). Lists are newest first.
 | `POST /api/people/:personId/observations` | `{ date, criterionId, indicatorId?, kind, situation, action, result }` → observation (201); 400 for an unknown criterion, an indicator of another criterion, a date after today, S/D/R empty or over 2000 chars |
 | `PATCH /api/observations/:id`          | Any of those fields; the merged observation is validated again                            |
 | `DELETE /api/observations/:id`         | 204                                                                                       |
+
+### Audit log (who, what, when)
+
+Every data change and every sign-in is written to an append-only event log (`src/audit`), which an ADMIN reads and
+checks in the app (`/admin/dziennik` in the frontend). Reads are not logged.
+
+| Route                          | What it does                                                                         |
+| ------------------------------ | ------------------------------------------------------------------------------------ |
+| `GET /api/admin/audit`         | ADMIN: `?actorId=&action=&from=&to=&page=1&pageSize=50` (max 200) → `{ items, total, page, pageSize }`, newest first. `action` is exact or a family (`CASE_ACTION` matches every `CASE_ACTION:*`); `from` / `to` are inclusive ISO dates or timestamps; 400 for invalid values |
+| `GET /api/admin/audit/verify`  | ADMIN: recomputes the whole chain → `{ ok: true, count }`, or `{ ok: false, count, firstBrokenId }` with the first entry that does not match (`count` = entries fine before it) |
+| `GET /api/admin/audit/actions` | ADMIN: `[{ action, label }]`, every action with its Polish name                      |
+
+- An entry (`items[]`): `{ id, seq, at, actorId, actorRole, action, resourceType, resourceId, changedFields, ip,
+  result, prevHash, hash }` plus, resolved when read, `actorName` (current name of the account, `null` without one),
+  `actionLabel` and `resourceTypeLabel` (Polish). `actorRole` is the role at the time, or `ASSESSED_VIA_LINK` for the
+  assessed person on `/api/ack/:token`; `result` is `OK`, `DENIED` (401/403/429) or `ERROR` (400, 404, 409, 500).
+  Actions: `LOGIN`, `LOGIN_FAILED`, `CASE_CREATE`, `CASE_PATCH`, `CASE_OBSERVATION_ADD`, `CASE_ACTION:<action>`,
+  `HR_REMINDERS`, `PERSON_UPDATE`, `USER_ROLE_CHANGED`, `DEMO_RESET`, `JOURNAL_NOTE_*`, `JOURNAL_OBSERVATION_*`,
+  `ACK_CONFIRM`, `ACK_OBJECTION`; a new route not yet named is still logged as `HTTP:<METHOD> <path>`.
+- How it is written: a global interceptor writes the entry of every POST/PUT/PATCH/DELETE after the handler and before
+  the response (`src/audit/audit-actions.ts` maps each route to its action and resource; an e2e test fails when a new
+  data-changing route is missing there). A change a role guard refuses (403) never reaches an interceptor, so a
+  middleware records it when the response is sent. Sign-in writes `LOGIN` / `LOGIN_FAILED` itself. Computations
+  (`POST /api/assessments/*`, `POST /api/assistant/ask`) and logout change nothing and are not logged.
+- RODO, data minimisation: `changedFields` holds the names of the top-level fields sent (`["ratings",
+  "justification"]`), never their values: no ratings, justifications, notes, objection texts or passwords. A failed
+  sign-in stores the id of the targeted account (`resourceId`, `null` for an unknown login), never the login typed.
+  The ack token is never stored (the entry names the case). Names are not stored either: `actorName` is looked up at
+  read time. The client IP (`ip`) is personal data: it is kept for security (who tried what from where), visible to
+  ADMIN only, and is the only personal datum in the log besides the account id. Behind a reverse proxy the IP is the
+  proxy's unless Express `trust proxy` is set. The log is kept indefinitely (retention is out of scope).
+- Immutability:
+  - Each entry has `hash = sha256(prevHash || canonical JSON of the entry)` (`src/audit/audit-chain.ts`; keys sorted,
+    `prevHash` of the first entry is 64 zeros), so a changed, removed or reordered entry breaks the chain and
+    `verify` names it. Removing entries from the end is not detectable by the chain alone.
+  - PostgreSQL (`audit_log`, migration `drizzle/20261122090545_audit_log`): a trigger refuses every `UPDATE`,
+    `DELETE` and `TRUNCATE` (`audit_log is append-only: … is not allowed`). Appends run in a transaction holding
+    `pg_advisory_xact_lock`, read the last entry and insert the next one, so parallel requests, also from several
+    instances, form one chain (unique `seq` and `prev_hash` back it up). The test `src/audit/audit.repository.spec.ts`
+    runs the real migrations on PGlite: UPDATE/DELETE/TRUNCATE fail, and an entry changed with the trigger disabled
+    is reported by `verify`. Against a real server: `docker compose up -d db`, start with `DATABASE_URL`, then
+    `docker compose exec db psql -U hacknation -c "DELETE FROM audit_log"` fails.
+  - Without `DATABASE_URL` the log is in memory with the same chain (no trigger, no API to change an entry): lost on
+    restart and kept per instance, so a deployment with several instances needs `DATABASE_URL`.
+- No route changes or removes an entry, and `POST /api/demo/reset` keeps the log (it adds `DEMO_RESET`).
+- A failed write of an entry is logged (action name and error type only) and does not fail the request, whose change
+  is already done.
 
 ### AI assistant (source-grounded)
 
