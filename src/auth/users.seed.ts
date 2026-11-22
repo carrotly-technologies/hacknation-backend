@@ -3,11 +3,17 @@ import type { User } from './user.types.js';
 /**
  * Demo accounts (fictional people). Every password is `Kompas2026!` (see
  * README); hashes are scrypt from `node scripts/hash-password.mjs <password>`.
+ * PESELs are made up (valid check digit) for the simulated login.gov.pl
+ * sign-in; they never leave the repository through the API.
  * Supervisors are linked to EVALUATORS in src/cases/seed/seed.data.ts.
  */
-export const USER_SEED: readonly (User & { passwordHash: string })[] = [
+export const USER_SEED: readonly (User & {
+  passwordHash: string;
+  pesel: string;
+})[] = [
   {
     id: 'u-kaminska',
+    pesel: '78031504123',
     login: 'k.wisniewska',
     firstName: 'Karolina',
     lastName: 'Wiśniewska',
@@ -20,6 +26,7 @@ export const USER_SEED: readonly (User & { passwordHash: string })[] = [
   },
   {
     id: 'u-sikora',
+    pesel: '71112205469',
     login: 'a.szymanczak',
     firstName: 'Agnieszka',
     lastName: 'Szymańczak',
@@ -32,6 +39,7 @@ export const USER_SEED: readonly (User & { passwordHash: string })[] = [
   },
   {
     id: 'u-pawlak',
+    pesel: '85060912483',
     login: 'j.kuchta',
     firstName: 'Jolanta',
     lastName: 'Kuchta',
@@ -44,6 +52,7 @@ export const USER_SEED: readonly (User & { passwordHash: string })[] = [
   },
   {
     id: 'u-lis',
+    pesel: '90022703645',
     login: 'a.cieslak-dyjecinska',
     firstName: 'Agata',
     lastName: 'Cieślak-Dyjecińska',
@@ -56,6 +65,7 @@ export const USER_SEED: readonly (User & { passwordHash: string })[] = [
   },
   {
     id: 'u-admin',
+    pesel: '68093017792',
     login: 'admin',
     firstName: 'Marek',
     lastName: 'Zając',

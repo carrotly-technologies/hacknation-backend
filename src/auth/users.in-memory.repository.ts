@@ -3,7 +3,7 @@ import type { Role, User } from './user.types.js';
 import { type UserCredentials, UsersRepository } from './users.repository.js';
 import { USER_SEED } from './users.seed.js';
 
-type Row = User & { passwordHash: string };
+type Row = User & { passwordHash: string; pesel: string };
 
 /** Accounts in memory, seeded on startup (until the database ticket lands). */
 @Injectable()
@@ -27,6 +27,11 @@ export class InMemoryUsersRepository extends UsersRepository {
     );
   }
 
+  findByPesel(pesel: string): Promise<User | null> {
+    const row = [...this.rows.values()].find((r) => r.pesel === pesel);
+    return Promise.resolve(row ? publicUser(row) : null);
+  }
+
   list(): Promise<User[]> {
     return Promise.resolve([...this.rows.values()].map(publicUser));
   }
@@ -39,6 +44,10 @@ export class InMemoryUsersRepository extends UsersRepository {
   }
 }
 
-function publicUser({ passwordHash: _hash, ...user }: Row): User {
+function publicUser({
+  passwordHash: _hash,
+  pesel: _pesel,
+  ...user
+}: Row): User {
   return { ...user };
 }

@@ -25,7 +25,10 @@ tego repozytorium; urząd uzupełnia go o swoje środowisko (hosting, kopie zapa
 - **Podstawa:** art. 6 ust. 1 lit. c RODO w zw. z art. 38 i 81–84 ustawy o służbie cywilnej oraz rozporządzeniami PRM
   z 2015 i 2016 r. Ocena jest obowiązkowa, aplikacja nie dodaje celów przetwarzania.
 - **Minimalizacja:** przetwarzamy tylko pola z wzorów arkuszy i z procedury oceny. Bez PESEL, adresu, danych
-  kontaktowych ocenianego i danych szczególnych kategorii. Każdy widok API zwraca tylko pola potrzebne odbiorcy:
+  kontaktowych ocenianego i danych szczególnych kategorii. Jedyny PESEL w systemie to identyfikator konta użytkownika
+  do logowania przez login.gov.pl (dziś symulacja z fikcyjnymi numerami w `src/auth/users.seed.ts`): służy tylko do
+  dopasowania konta, nie wraca w żadnej odpowiedzi API (poza wejściem makiety dostawcy tożsamości) i nie trafia do
+  logów ani dziennika zdarzeń. Każdy widok API zwraca tylko pola potrzebne odbiorcy:
   - link dla ocenianego (`GET /api/ack/:token`) zwraca dokładnie to, co drukuje arkusz: bez identyfikatorów,
     obserwacji, ocen wskaźników, OSP, historii i notatek (lista pól sprawdzana w `test/rodo.e2e-spec.ts`);
   - listy spraw, zespół i przegląd kadr zawierają tylko podsumowanie (osoba, etap, terminy, status), bez treści oceny;

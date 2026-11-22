@@ -55,6 +55,11 @@ export const AUDITED_ROUTES: Readonly<Record<string, RouteSpec>> = {
   'POST /auth/login': 'EXPLICIT',
   // Tokens are stateless: logout changes nothing on the server.
   'POST /auth/logout': 'SKIP',
+  // Simulated login.gov.pl: start and the mock identity provider change no
+  // data (the body carries a PESEL: never logged); the exchange logs itself.
+  'POST /auth/login-gov/start': 'SKIP',
+  'POST /auth/login-gov/mock-authorize': 'SKIP',
+  'POST /auth/login-gov': 'EXPLICIT',
   'POST /assessments/suggest-level': 'SKIP',
   'POST /assessments/evaluate': 'SKIP',
   'POST /assistant/ask': 'SKIP',
@@ -174,6 +179,8 @@ export function changedFieldsOf(body: unknown): string[] {
 const FIXED_LABELS: Readonly<Record<string, string>> = {
   LOGIN: 'Logowanie',
   LOGIN_FAILED: 'Nieudane logowanie',
+  LOGIN_GOV: 'Logowanie przez login.gov.pl (symulacja)',
+  LOGIN_GOV_FAILED: 'Nieudane logowanie przez login.gov.pl (symulacja)',
   CASE_CREATE: 'Rozpoczęcie nowej oceny',
   CASE_PATCH: 'Zmiana danych w ocenie',
   CASE_OBSERVATION_ADD: 'Dodanie obserwacji do oceny',
