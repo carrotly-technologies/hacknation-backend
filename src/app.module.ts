@@ -18,6 +18,7 @@ import { HrModule } from './hr/hr.module.js';
 import { JournalModule } from './journal/journal.module.js';
 import { OspModule } from './osp/osp.module.js';
 import { PeopleModule } from './people/people.module.js';
+import { RetentionModule } from './retention/retention.module.js';
 import { SheetsModule } from './sheets/sheets.module.js';
 
 @Module({
@@ -44,6 +45,7 @@ import { SheetsModule } from './sheets/sheets.module.js';
     AdminModule,
     JournalModule,
     PeopleModule,
+    RetentionModule,
   ],
 })
 export class AppModule {}

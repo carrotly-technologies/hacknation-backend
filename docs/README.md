@@ -5,6 +5,8 @@ Opis zgłoszenia (projekt, wykorzystanie AI, architektura, teksty do HackTribe):
 Oryginały leżą w podkatalogach tematycznych, a `tekst/` ma ich wersje tekstowe w tej samej strukturze,
 do czytania przez agentów i jako baza wiedzy asystenta AI.
 
+Dokumentacja RODO aplikacji (rejestr czynności przetwarzania, DPIA, polityka retencji): [`rodo/`](rodo/).
+
 ## Zadanie
 
 | Plik | Co to jest |
