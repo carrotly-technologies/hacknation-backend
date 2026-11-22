@@ -35,6 +35,7 @@ nie wpisywać.
 | Notatki i obserwacje | notatki przełożonego i obserwacje S-D-R o pracowniku (`journal_notes`, `journal_observations`), obserwacje w sprawie | oceniający | tylko autor wpisu | 10 lat od ostatniej zmiany notatki / od daty obserwacji; w bazie zaszyfrowane |
 | Konta | login, imię, nazwisko, rola, stanowisko, komórka, skrót hasła scrypt | administrator aplikacji | administrator (bez skrótów haseł), użytkownik sam o sobie | przez okres pełnienia funkcji; usuwa administrator |
 | Link dla ocenianego | losowy token (32 bajty), data ważności | aplikacja | nikt w API (oceniający widzi tylko link do przekazania) | 14 dni; po zapoznaniu link otwiera tylko potwierdzenie; usuwany przy anonimizacji |
+| Dziennik zdarzeń | kto (id konta i rola), co (nazwa akcji i nazwy zmienionych pól, bez ich treści), kiedy, zasób (id sprawy, pracownika, konta), adres IP, wynik (`audit_log`) | aplikacja, przy każdej zmianie danych i każdym logowaniu | tylko administrator aplikacji | bezterminowo (wpisów nie da się zmienić ani usunąć: trigger w bazie, łańcuch skrótów); okres retencji ustala urząd |
 | Pytania do asystenta | treść pytania, historia czatu z bieżącej sesji | użytkownik | nikt: nie są zapisywane ani logowane | czas trwania żądania |
 
 ## Gdzie to jest w kodzie
@@ -43,4 +44,5 @@ nie wpisywać.
   `src/people/people.types.ts`, `src/hr/hr.service.ts`, `src/auth/user.types.ts` (`toUserView`), test
   `test/rodo.e2e-spec.ts`.
 - Szyfrowanie: `src/crypto/field-cipher.ts`, `src/journal/postgres-journal.repository.ts`.
+- Dziennik zdarzeń (rozliczalność, art. 5 ust. 2 i art. 32 RODO): `src/audit/`, README „Audit log”.
 - Retencja: `src/retention/retention.rules.ts`, `src/retention/retention.service.ts`, `npm run retention`.
