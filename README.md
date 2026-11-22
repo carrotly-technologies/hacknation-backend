@@ -72,7 +72,7 @@ Every `/api/*` route needs `Authorization: Bearer <token>` (401 without a valid 
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:3000/api/auth/login -H 'content-type: application/json' \
-  -d '{"login":"j.kaminska","password":"Kompas2026!"}' | jq -r .accessToken)
+  -d '{"login":"k.wisniewska","password":"Kompas2026!"}' | jq -r .accessToken)
 curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 ```
 
@@ -103,13 +103,13 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 
 All people are fictional.
 
-| Login        | Password      | Role         | Who                                     |
-| ------------ | ------------- | ------------ | --------------------------------------- |
-| `j.kaminska` | `Kompas2026!` | `SUPERVISOR` | Joanna Kamińska, 6 cases (c-001…c-006)  |
-| `r.sikora`   | `Kompas2026!` | `SUPERVISOR` | Robert Sikora, 2 cases (c-101, c-102)   |
-| `a.pawlak`   | `Kompas2026!` | `SUPERVISOR` | Agnieszka Pawlak, 2 cases (c-103, c-104) |
-| `a.lis`      | `Kompas2026!` | `HR`         | Agnieszka Lis, HR (kadry)               |
-| `admin`      | `Kompas2026!` | `ADMIN`      | Marek Zając, administrator              |
+| Login                  | Password      | Role         | Who                                          |
+| ---------------------- | ------------- | ------------ | -------------------------------------------- |
+| `k.wisniewska`         | `Kompas2026!` | `SUPERVISOR` | Karolina Wiśniewska, 6 cases (c-001…c-006)   |
+| `a.szymanczak`         | `Kompas2026!` | `SUPERVISOR` | Agnieszka Szymańczak, 2 cases (c-101, c-102) |
+| `j.kuchta`             | `Kompas2026!` | `SUPERVISOR` | Jolanta Kuchta, 2 cases (c-103, c-104)       |
+| `a.cieslak-dyjecinska` | `Kompas2026!` | `HR`         | Agata Cieślak-Dyjecińska, HR (kadry)         |
+| `admin`                | `Kompas2026!` | `ADMIN`      | Marek Zając, administrator                   |
 
 ## API
 

@@ -29,22 +29,22 @@ const TEAM_UNIT = 'Wydział Analiz i Koordynacji, Departament Spraw Cyfrowych';
 export const EVALUATORS: readonly Evaluator[] = [
   {
     id: SUPERVISOR_ID,
-    firstName: 'Joanna',
-    lastName: 'Kamińska',
+    firstName: 'Karolina',
+    lastName: 'Wiśniewska',
     position: 'Naczelnik wydziału',
     unit: TEAM_UNIT,
   },
   {
     id: 'ev-sikora',
-    firstName: 'Robert',
-    lastName: 'Sikora',
+    firstName: 'Agnieszka',
+    lastName: 'Szymańczak',
     position: 'Naczelnik wydziału',
     unit: 'Wydział Budżetu i Finansów, Biuro Dyrektora Generalnego',
   },
   {
     id: 'ev-pawlak',
-    firstName: 'Agnieszka',
-    lastName: 'Pawlak',
+    firstName: 'Jolanta',
+    lastName: 'Kuchta',
     position: 'Naczelnik wydziału',
     unit: 'Wydział Legislacji, Departament Prawny',
   },

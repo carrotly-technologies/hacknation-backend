@@ -45,18 +45,18 @@ HR monitoruje statusy i terminy w całym urzędzie i wysyła przypomnienia.
 
 1. Otwórz <https://hacknation.rabbithole.carrotly.tech>. Pod formularzem logowania są karty kont demo: kliknij kartę,
    żeby się zalogować. Hasło każdego konta: `Kompas2026!`. Wszystkie dane są fikcyjne, „dziś” w demo to 21.11.2026.
-   - `j.kaminska` – przełożona (6 teczek), zalecane na start
-   - `a.lis` – HR (monitoring całego urzędu)
+   - `k.wisniewska` – przełożona (6 teczek), zalecane na start
+   - `a.cieslak-dyjecinska` – HR (monitoring całego urzędu)
    - `admin` – administrator (konta i role)
-   - `r.sikora`, `a.pawlak` – inni przełożeni (każdy widzi tylko swoje teczki)
-2. Zalecana ścieżka jako `j.kaminska`:
+   - `a.szymanczak`, `j.kuchta` – inni przełożeni (każdy widzi tylko swoje teczki)
+2. Zalecana ścieżka jako `k.wisniewska`:
    - „Mój zespół” → Piotr Wójcik, teczka **c-002**: początek oceny okresowej (analiza opisu stanowiska → arkusz →
      kryteria → część I);
    - teczka **c-001** (Formularz oceny kompetencji): oceń wskaźniki, zobacz sugerowany poziom, podejmij decyzję;
    - przycisk „Asystent AI” (prawy dolny róg): zapytaj np. „Ile dni ma oceniany na wniesienie sprzeciwu?”;
    - teczka **c-006**: pobierz arkusz PDF / DOCX;
    - teczka **c-004**: pierwsza ocena.
-3. Zaloguj się jako `a.lis`, żeby zobaczyć panel HR i przypomnienia.
+3. Zaloguj się jako `a.cieslak-dyjecinska`, żeby zobaczyć panel HR i przypomnienia.
 4. Przycisk „Przywróć dane demonstracyjne” w górnym pasku przywraca stan początkowy.
 
 ## Linki

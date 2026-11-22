@@ -80,17 +80,17 @@ ciemny, wysoki kontrast i powiększenie tekstu do 150%.
 Wejdź na <https://hacknation.rabbithole.carrotly.tech>. Pod formularzem logowania są karty kont demo (logowanie
 jednym kliknięciem). Hasło wszystkich kont: `Kompas2026!`. Wszystkie osoby i dane są fikcyjne.
 
-| Login        | Rola           | Kto i co widzi                                      |
-| ------------ | -------------- | --------------------------------------------------- |
-| `j.kaminska` | przełożony     | Joanna Kamińska, 6 teczek (c-001…c-006)             |
-| `r.sikora`   | przełożony     | Robert Sikora, 2 teczki (c-101, c-102)              |
-| `a.pawlak`   | przełożony     | Agnieszka Pawlak, 2 teczki (c-103, c-104)           |
-| `a.lis`      | HR             | Agnieszka Lis, panel HR całego urzędu               |
-| `admin`      | administrator  | Marek Zając, konta i role                           |
+| Login                  | Rola          | Kto i co widzi                                   |
+| ---------------------- | ------------- | ------------------------------------------------ |
+| `k.wisniewska`         | przełożony    | Karolina Wiśniewska, 6 teczek (c-001…c-006)      |
+| `a.szymanczak`         | przełożony    | Agnieszka Szymańczak, 2 teczki (c-101, c-102)    |
+| `j.kuchta`             | przełożony    | Jolanta Kuchta, 2 teczki (c-103, c-104)          |
+| `a.cieslak-dyjecinska` | HR            | Agata Cieślak-Dyjecińska, panel HR całego urzędu |
+| `admin`                | administrator | Marek Zając, konta i role                        |
 
 Data „dziś” w demo to 21.11.2026; wszystkie terminy liczone są względem niej.
 
-**Zalecana ścieżka (ok. 10 minut), konto `j.kaminska`:**
+**Zalecana ścieżka (ok. 10 minut), konto `k.wisniewska`:**
 
 1. „Mój zespół” → Piotr Wójcik → teczka **c-002** (ocena okresowa na etapie „Analiza opisu stanowiska”: początek
    procesu). Przyjmij analizę OSP, zobacz proponowany arkusz C i kryteria dodatkowe, przejdź do części I.
@@ -100,7 +100,7 @@ Data „dziś” w demo to 21.11.2026; wszystkie terminy liczone są względem n
    przeprowadza się rozmowę rozpoczynającą?”, „Jaką ocenę mam dać pracownikowi?” (odmowa) albo pytanie spoza tematu.
 4. Teczka **c-006** (etap „Dokument i zapoznanie”): pobierz arkusz jako PDF i DOCX.
 5. Teczka **c-004**: ścieżka pierwszej oceny (etap „Sprawozdanie pracownika”).
-6. Wyloguj się i zaloguj jako `a.lis` (HR): panel monitoringu i przypomnienia.
+6. Wyloguj się i zaloguj jako `a.cieslak-dyjecinska` (HR): panel monitoringu i przypomnienia.
 
 Dane demo są w pamięci serwera; przycisk „Przywróć dane demonstracyjne” w górnym pasku przywraca stan początkowy.
 

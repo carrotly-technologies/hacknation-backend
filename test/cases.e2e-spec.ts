@@ -18,8 +18,8 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    supervisor = await loginAs(app, 'j.kaminska');
-    hr = await loginAs(app, 'a.lis');
+    supervisor = await loginAs(app, 'k.wisniewska');
+    hr = await loginAs(app, 'a.cieslak-dyjecinska');
   });
 
   afterAll(async () => {
@@ -41,8 +41,8 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     const res = await http().get('/api/me').expect(200);
     expect(res.body).toEqual({
       id: 'u-kaminska',
-      login: 'j.kaminska',
-      name: 'Joanna Kamińska',
+      login: 'k.wisniewska',
+      name: 'Karolina Wiśniewska',
       role: 'SUPERVISOR',
       position: 'Naczelnik wydziału',
       unit: expect.stringContaining('Wydział'),
@@ -84,7 +84,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       evaluation: null,
       ratings: {},
       osp: { source: 'OSP DSI WWI 5 radca.docx' },
-      evaluator: { firstName: 'Joanna', lastName: 'Kamińska' },
+      evaluator: { firstName: 'Karolina', lastName: 'Wiśniewska' },
     });
     expect(res.body.observations).toHaveLength(8);
     expect(res.body.formalCheck.some((f: { ok: boolean }) => !f.ok)).toBe(true);
@@ -476,7 +476,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     });
     expect(res.body.cases).toHaveLength(11);
     expect(res.body.cases[0]).toMatchObject({
-      evaluatorName: 'Joanna Kamińska',
+      evaluatorName: 'Karolina Wiśniewska',
       lastReminderOn: null,
     });
 
@@ -489,7 +489,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       caseId: 'c-102',
       date: '2026-11-21',
     });
-    expect(res.body.log[0].text).toContain('Robert Sikora');
+    expect(res.body.log[0].text).toContain('Agnieszka Szymańczak');
 
     const detail = await asHr().get('/api/cases/c-102').expect(200);
     expect(detail.body.history.at(-1).text).toContain('Przypomnienie');

@@ -17,7 +17,7 @@ describe('Competency model, sheets and assessments (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    token = await loginAs(app, 'j.kaminska');
+    token = await loginAs(app, 'k.wisniewska');
   });
 
   afterAll(async () => {

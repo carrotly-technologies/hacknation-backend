@@ -19,8 +19,8 @@ describe('people.rules', () => {
     const p = profile([seed('c-001')])!;
     expect(p.person.id).toBe('p-nowak');
     expect(p.supervisor).toEqual({
-      firstName: 'Joanna',
-      lastName: 'Kamińska',
+      firstName: 'Karolina',
+      lastName: 'Wiśniewska',
       position: 'Naczelnik wydziału',
       unit: expect.any(String),
     });
@@ -69,7 +69,7 @@ describe('people.rules', () => {
     expect(p.history[0]).toMatchObject({ status: 'ZAKONCZONA' });
     expect(p.currentCase).toBeNull();
     expect(p.nextAssessment).toBe('OKRESOWA');
-    expect(p.supervisor?.lastName).toBe('Kamińska');
+    expect(p.supervisor?.lastName).toBe('Wiśniewska');
   });
 
   it('takes the job description from the current case, null without one', () => {

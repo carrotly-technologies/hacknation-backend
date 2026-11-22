@@ -22,7 +22,9 @@ describe('Authentication, roles and permissions (e2e)', () => {
     configureApp(app);
     await app.init();
     [kaminska, sikora, hr, admin] = await Promise.all(
-      ['j.kaminska', 'r.sikora', 'a.lis', 'admin'].map((l) => loginAs(app, l)),
+      ['k.wisniewska', 'a.szymanczak', 'a.cieslak-dyjecinska', 'admin'].map(
+        (l) => loginAs(app, l),
+      ),
     );
   });
 
@@ -50,12 +52,16 @@ describe('Authentication, roles and permissions (e2e)', () => {
     it('returns an 8 h bearer token and the user', async () => {
       const res = await anon()
         .post('/api/auth/login')
-        .send({ login: 'J.Kaminska', password: 'Kompas2026!' })
+        .send({ login: 'K.Wisniewska', password: 'Kompas2026!' })
         .expect(200);
       expect(res.body).toMatchObject({
         tokenType: 'Bearer',
         expiresIn: 8 * 3600,
-        user: { id: 'u-kaminska', role: 'SUPERVISOR', name: 'Joanna Kamińska' },
+        user: {
+          id: 'u-kaminska',
+          role: 'SUPERVISOR',
+          name: 'Karolina Wiśniewska',
+        },
       });
       expect(res.body.user).not.toHaveProperty('passwordHash');
       expect(res.body.accessToken.split('.')).toHaveLength(3);
@@ -64,7 +70,7 @@ describe('Authentication, roles and permissions (e2e)', () => {
     it('answers a wrong password and an unknown login with the same 401', async () => {
       const wrong = await anon()
         .post('/api/auth/login')
-        .send({ login: 'j.kaminska', password: 'nope' })
+        .send({ login: 'k.wisniewska', password: 'nope' })
         .expect(401);
       const unknown = await anon()
         .post('/api/auth/login')
@@ -116,9 +122,9 @@ describe('Authentication, roles and permissions (e2e)', () => {
 
   describe('GET /api/me', () => {
     it.each([
-      ['hr', 'HR', 'Agnieszka Lis'],
+      ['hr', 'HR', 'Agata Cieślak-Dyjecińska'],
       ['admin', 'ADMIN', 'Marek Zając'],
-      ['sikora', 'SUPERVISOR', 'Robert Sikora'],
+      ['sikora', 'SUPERVISOR', 'Agnieszka Szymańczak'],
     ])('returns the signed-in %s', async (who, role, name) => {
       const token = { hr, admin, sikora }[who]!;
       const res = await as(token).get('/api/me').expect(200);
@@ -226,10 +232,10 @@ describe('Authentication, roles and permissions (e2e)', () => {
     it('lists users without password hashes', async () => {
       const res = await as(admin).get('/api/admin/users').expect(200);
       expect(res.body.map((u: { login: string }) => u.login)).toEqual([
-        'j.kaminska',
-        'r.sikora',
-        'a.pawlak',
-        'a.lis',
+        'k.wisniewska',
+        'a.szymanczak',
+        'j.kuchta',
+        'a.cieslak-dyjecinska',
         'admin',
       ]);
       expect(JSON.stringify(res.body)).not.toContain('scrypt');
@@ -242,7 +248,7 @@ describe('Authentication, roles and permissions (e2e)', () => {
           .send({ role: 'HR' })
           .expect(200);
         expect(res.body).toMatchObject({ id: 'u-pawlak', role: 'HR' });
-        const token = await loginAs(app, 'a.pawlak');
+        const token = await loginAs(app, 'j.kuchta');
         const me = await as(token).get('/api/me').expect(200);
         expect(me.body.role).toBe('HR');
         await as(token).get('/api/hr/overview').expect(200);
