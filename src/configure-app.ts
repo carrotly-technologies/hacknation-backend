@@ -1,5 +1,6 @@
 import { INestApplication, StandardSchemaValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { setupSwagger } from './common/openapi.js';
 
 export const DEFAULT_FRONTEND_URL = 'http://localhost:5173';
 
@@ -13,4 +14,6 @@ export function configureApp(app: INestApplication): void {
     // The frontend reads the file name of a downloaded sheet (export module).
     exposedHeaders: ['Content-Disposition'],
   });
+  // Swagger UI: /api/swagger, OpenAPI spec: /api/swagger.json (on in production too).
+  setupSwagger(app);
 }

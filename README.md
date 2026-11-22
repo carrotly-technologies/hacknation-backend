@@ -47,11 +47,28 @@ All routes are under the `/api` prefix:
 curl localhost:3000/api/health   # {"status":"ok"}
 ```
 
+## API docs (Swagger)
+
+Every route with its summary (Polish), request body schema, error codes and required auth, grouped by module:
+
+| Where      | Swagger UI                                                     | OpenAPI 3 spec (JSON)                                               |
+| ---------- | -------------------------------------------------------------- | ------------------------------------------------------------------- |
+| local      | <http://localhost:3000/api/swagger>                            | <http://localhost:3000/api/swagger.json>                            |
+| production | <https://api.hacknation.rabbithole.carrotly.tech/api/swagger> | <https://api.hacknation.rabbithole.carrotly.tech/api/swagger.json> |
+
+- Both are public and on in production too. Not `/api/docs`: that path serves the source documents.
+- To call a protected route from the UI: `POST /api/auth/login` (a demo account below) → copy `accessToken` →
+  „Authorize” → paste it. The token is kept across reloads.
+- Body schemas come from the same zod schemas that validate the requests (`@Body({ schema })`, converted by
+  `@nestjs/swagger` through Standard JSON Schema), so they can't drift apart. Routes are `bearer` unless `@Public()`,
+  bodies get 400 and roles (`@Roles`) 403 automatically (`src/common/openapi.ts`); per route there is only
+  `@ApiTags`, `@ApiOperation({ summary })` and the 404/409 the controller throws.
+
 ## Sign-in, roles and permissions
 
 Every `/api/*` route needs `Authorization: Bearer <token>` (401 without a valid one), except `GET /api/health`,
-`GET /api/config`, `POST /api/auth/login` and the document files `GET /api/docs/<path>` (public legal texts opened
-from answer links in a new tab). A route for another role answers 403.
+`GET /api/config`, `POST /api/auth/login`, Swagger (`/api/swagger`, `/api/swagger.json`) and the document files
+`GET /api/docs/<path>` (public legal texts opened from answer links in a new tab). A route for another role answers 403.
 
 ```bash
 TOKEN=$(curl -s -X POST localhost:3000/api/auth/login -H 'content-type: application/json' \
