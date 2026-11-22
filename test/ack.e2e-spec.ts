@@ -5,7 +5,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { CaseStore } from './../src/cases/case-store.service.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
 /** c-101: signed by Robert Sikora, waiting for the assessed person. */
 describe('Link for the assessed person (e2e)', () => {
@@ -32,7 +32,7 @@ describe('Link for the assessed person (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await withToken(app, sikora).post('/api/demo/reset').expect(200);
+    await resetDemo(app);
   });
 
   const anon = () => request(app.getHttpServer());

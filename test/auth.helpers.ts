@@ -24,3 +24,9 @@ export function withToken(app: INestApplication<App>, token: string) {
     .agent(app.getHttpServer())
     .set('Authorization', `Bearer ${token}`);
 }
+
+/** Restores the demo seed as the admin (POST /api/demo/reset is ADMIN/HR only). */
+export async function resetDemo(app: INestApplication<App>): Promise<void> {
+  const admin = await loginAs(app, 'admin');
+  await withToken(app, admin).post('/api/demo/reset').expect(200);
+}

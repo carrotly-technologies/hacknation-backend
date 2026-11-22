@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
 describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
   let app: INestApplication<App>;
@@ -27,7 +27,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
   });
 
   beforeEach(async () => {
-    await http().post('/api/demo/reset').expect(200);
+    await resetDemo(app);
   });
 
   const http = () => withToken(app, supervisor);
@@ -502,7 +502,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
 
   it('POST /api/demo/reset restores the seed', async () => {
     await act('c-002', 'ACCEPT_OSP_ANALYSIS').expect(200);
-    await http().post('/api/demo/reset').expect(200);
+    await resetDemo(app);
     const res = await http().get('/api/cases/c-002').expect(200);
     expect(res.body.currentStage).toBe('OSP_ANALYSIS');
   });

@@ -5,7 +5,7 @@ import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
 import { JournalRepository } from './../src/journal/journal.repository.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
 // p-nowak and p-wojcik: cases of the demo supervisor; p-wieczorek: a case of
 // another evaluator (ev-sikora).
@@ -36,7 +36,7 @@ describe('Journal: notes and observations about an employee (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await http().post('/api/demo/reset').expect(200);
+    await resetDemo(app);
   });
 
   const http = () => withToken(app, supervisor);
@@ -263,7 +263,7 @@ describe('Journal: notes and observations about an employee (e2e)', () => {
       .send({ text: 'Do usunięcia przez reset' })
       .expect(201);
     await http().delete(`/api/notes/${before.body[0].id}`).expect(204);
-    await http().post('/api/demo/reset').expect(200);
+    await resetDemo(app);
     const after = await http().get('/api/people/p-nowak/notes').expect(200);
     expect(after.body.map((n: { id: string }) => n.id)).toEqual(
       before.body.map((n: { id: string }) => n.id),
