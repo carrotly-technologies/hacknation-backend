@@ -75,7 +75,13 @@ describe('Assistant (e2e, no LLM configured)', () => {
         history: [{ question: first, answer: one.body.answer }],
       }).expect(200);
       expect(res.body).toMatchObject({ grounded: true, mode: 'EXTRACTIVE' });
-      expect(res.body.sources[0].ref).toMatch(/^art\. 83 ust\. 1 /);
+      // art. 83 ust. 1 itself or the Q&A entry that restates it.
+      expect(res.body.sources[0].quote).toContain(
+        'dyrektora generalnego urzędu',
+      );
+      expect(res.body.sources[0].quote).toMatch(
+        /art\. 83 ust\. 1|^Art\. 83\. 1\./,
+      );
       expect(res.body.answer).toContain('dyrektora generalnego urzędu');
     });
 

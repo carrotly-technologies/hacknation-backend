@@ -99,4 +99,29 @@ describe('answer rules', () => {
     expect(user.content).toContain('kontekst');
     expect(user.content).toContain(`Pytanie: ${q}`);
   });
+
+  it('answers the objection deadline with 7 days, not the 14-day review', () => {
+    const q = 'Ile dni ma oceniany na sprzeciw?';
+    const r = retrieve(kb, q);
+    const sources = toSources(r.hits, q);
+    expect(sources[0].ref).toBe('Zestaw Q&A, pyt. 75');
+    expect(sources[0].quote).toMatch(
+      /^Sprzeciw wnosi się w terminie 7 dni od dnia zapoznania/,
+    );
+    // The language model gets the same first excerpt.
+    expect(buildMessages(q, r.hits)[1].content).toContain(
+      '[1] Zestaw pytań i odpowiedzi o ocenach w służbie cywilnej — Zestaw Q&A, pyt. 75',
+    );
+  });
+
+  it('picks the Q&A entry covering more of the question', () => {
+    const q = 'W jakim terminie przysługuje sprzeciw od oceny okresowej?';
+    expect(retrieve(kb, q).hits[0].chunk.ref).toBe('Zestaw Q&A, pyt. 75');
+  });
+
+  it('gives the number of mandatory criteria of sheet C', () => {
+    const q = 'Ile kryteriów obowiązkowych ma arkusz C?';
+    const [first] = toSources(retrieve(kb, q).hits, q);
+    expect(first.quote).toMatch(/Arkusz C[^.]*ma 5 kryteriów obowiązkowych/);
+  });
 });
