@@ -192,6 +192,12 @@ export interface AssessmentTalkTopic {
   legalBasis: string;
 }
 
+/** The assessed person's objection (art. 83 ust. 1 ustawy), recorded through the ack link. */
+export interface Objection {
+  text: string;
+  submittedOn: string;
+}
+
 export interface HistoryEntry {
   date: string;
   text: string;
@@ -229,6 +235,8 @@ export interface CaseDetail extends CaseSummary {
   ackLinkExpiresOn: string | null;
   acknowledgedOn: string | null;
   objectionDeadline: Deadline | null;
+  /** Filed once through the ack link, within the objection term. */
+  objection: Objection | null;
   history: HistoryEntry[];
 }
 
@@ -282,6 +290,8 @@ export interface CaseRecord {
   ackToken: string | null;
   ackTokenExpiresOn: string | null;
   acknowledgedOn: string | null;
+  /** Set by POST /api/ack/:token/objection (objection.rules.ts). */
+  objection: Objection | null;
   history: HistoryEntry[];
   lastReminderOn: string | null;
 }

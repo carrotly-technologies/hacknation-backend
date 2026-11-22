@@ -71,6 +71,7 @@ export function toDetail(
     ackLinkExpiresOn: ackLink ? record.ackTokenExpiresOn : null,
     acknowledgedOn: record.acknowledgedOn,
     objectionDeadline: objectionDeadlineOf(record, today),
+    objection: record.objection,
     history: record.history,
     availableActions: availableActions(record, today),
   };

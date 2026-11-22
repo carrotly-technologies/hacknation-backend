@@ -8,6 +8,8 @@ import { describeDaysLeft } from '../cases/deadlines.rules.js';
 export interface HrCase extends CaseSummary {
   evaluatorName: string;
   lastReminderOn: string | null;
+  /** Date the assessed person filed an objection ("Sprzeciw"), else null. */
+  objectionSubmittedOn: string | null;
 }
 
 @Injectable()
@@ -19,6 +21,7 @@ export class HrService {
       ...this.cases.summary(record),
       evaluatorName: this.cases.evaluatorName(record),
       lastReminderOn: record.lastReminderOn,
+      objectionSubmittedOn: record.objection?.submittedOn ?? null,
     }));
     const count = (pred: (c: HrCase) => boolean) => cases.filter(pred).length;
     return {

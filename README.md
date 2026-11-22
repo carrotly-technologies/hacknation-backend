@@ -131,15 +131,16 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `POST /api/cases/:id/observations` | Adds an S-D-R observation (201)                                                        |
 | `POST /api/cases/:id/actions`    | State machine (`{ action, date? }`; `date` only for `RECORD_ASSESSMENT_TALK`); 409 with a Polish explanation for an illegal transition, 400 for an invalid date |
 | `GET /api/osp`                   | The 3 real OSP documents from the materials (`src/osp/osp.data.ts`)                     |
-| `GET /api/hr/overview`           | Counters and every case in the office, with evaluator and last reminder                 |
+| `GET /api/hr/overview`           | Counters and every case in the office, with evaluator, last reminder and `objectionSubmittedOn` (date of the objection, „Sprzeciw”, else `null`) |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
 | `POST /api/demo/reset`           | Restores the seed (cases and the journal)                                                |
 | `GET /api/people/:personId`      | Employee profile: `{ person, supervisor, osp, history, currentCase, nextAssessment }`. `osp` = `{ title, purpose, mainTasks }` from the job description of the current case (else the latest), or `null` without one. `history` is newest first: `{ source: 'SYSTEM', caseId, path, cycleLabel, status, result, level, signedByEvaluatorOn, acknowledgedOn }` per case (`result` once signed) and last `{ source: 'EXTERNAL', result, level, date }` (the assessment before the system); `currentCase` = `{ id, path, currentStage }` of the newest unfinished case or `null`; `nextAssessment` `OKRESOWA` \| `PIERWSZA`. Built from the cases the caller may read; 404 for an unknown person and for someone else's employee |
 | `PATCH /api/people/:personId`    | `{ position, unit, employment: 'URZEDNIK' \| 'PRACOWNIK', hiredOn }` (all required, `hiredOn` not after today) → the profile as in `GET`; updates the person in all their cases. Same access as `GET` (404 otherwise), 400 for an empty field or a future date |
 | `GET /api/cases/:id/sheet.pdf`   | The filled periodic sheet (A/B/C, parts I–III) as a PDF (Open Sans embedded); who may read the case may download it (403/404 as `GET /api/cases/:id`, 409 for the first assessment) |
 | `GET /api/cases/:id/sheet.docx`  | The same sheet as DOCX (Word, LibreOffice)                                                |
-| `GET /api/ack/:token`            | Public (no sign-in): the read-only sheet for the assessed person, or `{ acknowledgedOn, objectionDeadline }` once confirmed; 404 for an unknown, replaced or expired link |
-| `POST /api/ack/:token`           | Public: `{ confirmed: true }` → `EMPLOYEE_ACK_ASSESSMENT` today, `{ acknowledgedOn, objectionDeadline }`; 400 without `confirmed: true`, 404 as above; a repeat returns the first date |
+| `GET /api/ack/:token`            | Public (no sign-in): the read-only sheet for the assessed person, or `{ acknowledgedOn, objectionDeadline, objection, objectionOpen }` once confirmed (also after the objection term, then `objectionOpen: false`); 404 for an unknown, replaced or expired link |
+| `POST /api/ack/:token`           | Public: `{ confirmed: true }` → `EMPLOYEE_ACK_ASSESSMENT` today, `{ acknowledgedOn, objectionDeadline, objection, objectionOpen }`; 400 without `confirmed: true`, 404 as above; a repeat returns the first date |
+| `POST /api/ack/:token/objection` | Public: `{ text (1–4000 chars, trimmed), confirmed: true }` → records the objection (art. 83 ust. 1: periodic only, once, within 7 days of the acknowledgement) as `CaseDetail.objection` `{ text, submittedOn }` plus a history entry; returns the same body as `GET`; 400 for invalid input, 404 as above, 409 before the acknowledgement, after the term, for a first assessment or a second time |
 
 - Sheet files (`src/export/`): built from the same case data as the sheet preview in the frontend and the fixed texts
   of the sheet `template`; PDF with [pdfmake](https://github.com/bpampuch/pdfmake) (MIT), DOCX with
@@ -173,6 +174,9 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
   frontend path) and `ackLinkExpiresOn` are filled only for the case's evaluator and only until the confirmation; the
   token itself is never in the case view. `GET /api/ack/:token` returns only what the sheet prints (no ids,
   observations, indicator ratings, OSP or history). `CaseDetail.sentForAckOn` is the date of the first handover.
+  After the confirmation the link no longer shows the sheet but keeps working for the objection
+  (`src/cases/objection.rules.ts`, hacknation-backend#56): until `objectionDeadline` the assessed person can file
+  one objection, read-only afterwards; past the term `GET` returns `objectionOpen: false`.
 - Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` („Wstępny formularz”: the evaluator reviews the proposed sheet and
   criteria, may change them with PATCH, then `ACCEPT_SHEET`) → `OPENING_TALK` → … `ACCEPT_OSP_ANALYSIS` now moves the
   case to `SHEET_PROPOSAL`; cases already past it report its `completedOn` as the OSP analysis date.
