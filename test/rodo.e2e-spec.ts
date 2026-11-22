@@ -30,7 +30,7 @@ const keysOf = (value: object) => Object.keys(value).sort();
 /** docs/rodo: data minimisation and retention, checked through the API. */
 describe('RODO (e2e)', () => {
   let app: INestApplication<App>;
-  let sikora: string;
+  let supervisor: string;
   let hr: string;
   let admin: string;
 
@@ -43,8 +43,8 @@ describe('RODO (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    sikora = await loginAs(app, 'r.sikora');
-    hr = await loginAs(app, 'a.lis');
+    supervisor = await loginAs(app, 'a.szymanczak');
+    hr = await loginAs(app, 'a.cieslak-dyjecinska');
     admin = await loginAs(app, 'admin');
   });
 
@@ -58,7 +58,7 @@ describe('RODO (e2e)', () => {
 
   describe('minimisation', () => {
     it('GET /api/ack/:token returns only what the sheet prints', async () => {
-      const sent = await withToken(app, sikora)
+      const sent = await withToken(app, supervisor)
         .post('/api/cases/c-101/actions')
         .send({ action: 'SEND_FOR_ACK' })
         .expect(200);
@@ -137,7 +137,8 @@ describe('RODO (e2e)', () => {
         (await withToken(app, hr).get('/api/hr/overview').expect(200)).body
           .cases,
         (await withToken(app, hr).get('/api/cases').expect(200)).body,
-        (await withToken(app, sikora).get('/api/team').expect(200)).body.cases,
+        (await withToken(app, supervisor).get('/api/team').expect(200)).body
+          .cases,
       ] as object[][];
       for (const list of lists) {
         expect(list.length).toBeGreaterThan(0);
@@ -150,7 +151,7 @@ describe('RODO (e2e)', () => {
     });
 
     it('the case view never holds the link secret, only the derived link', async () => {
-      for (const token of [sikora, hr]) {
+      for (const token of [supervisor, hr]) {
         const { body } = await withToken(app, token)
           .get('/api/cases/c-101')
           .expect(200);
@@ -167,9 +168,11 @@ describe('RODO (e2e)', () => {
     });
 
     it('the employee profile has no assessment texts', async () => {
-      const team = await withToken(app, sikora).get('/api/team').expect(200);
+      const team = await withToken(app, supervisor)
+        .get('/api/team')
+        .expect(200);
       const personId = team.body.cases[0].person.id as string;
-      const { body } = await withToken(app, sikora)
+      const { body } = await withToken(app, supervisor)
         .get(`/api/people/${personId}`)
         .expect(200);
       const text = JSON.stringify(body);
@@ -211,7 +214,7 @@ describe('RODO (e2e)', () => {
       const old = store.find('c-102')!;
       store.save({ ...old, acknowledgedOn: '2015-12-01' });
       const before = (
-        await withToken(app, sikora).get('/api/cases/c-101').expect(200)
+        await withToken(app, supervisor).get('/api/cases/c-101').expect(200)
       ).body;
 
       const report = await app.get(RetentionService).run();
@@ -222,7 +225,7 @@ describe('RODO (e2e)', () => {
       });
 
       const anon = (
-        await withToken(app, sikora).get('/api/cases/c-102').expect(200)
+        await withToken(app, supervisor).get('/api/cases/c-102').expect(200)
       ).body;
       expect(anon.person).toMatchObject({
         id: 'anon-c-102',
@@ -245,7 +248,8 @@ describe('RODO (e2e)', () => {
       ).toBe('zanonimizowana');
 
       expect(
-        (await withToken(app, sikora).get('/api/cases/c-101').expect(200)).body,
+        (await withToken(app, supervisor).get('/api/cases/c-101').expect(200))
+          .body,
       ).toEqual(before);
       expect((await app.get(RetentionService).run()).casesAnonymized).toBe(0);
     });
