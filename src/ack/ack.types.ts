@@ -1,5 +1,10 @@
 import type { EvaluateResult } from '../assessments/evaluate.rules.js';
-import type { CaseDetail, Deadline, StageId } from '../cases/case.types.js';
+import type {
+  CaseDetail,
+  Deadline,
+  Objection,
+  StageId,
+} from '../cases/case.types.js';
 import type { ScaleLevel } from '../competency-model/competency-model.types.js';
 import type { Sheet } from '../sheets/sheet.types.js';
 
@@ -46,9 +51,16 @@ export interface AckPending {
   competencies: { id: string; name: string }[];
 }
 
-/** GET after the confirmation, and the POST response. */
+/**
+ * GET after the confirmation, and the response of both POSTs. The link keeps
+ * working after the objection term too, then with `objectionOpen: false`.
+ */
 export interface AckDone {
   acknowledgedOn: string;
   /** Only for a periodic assessment (art. 83 ust. 1 ustawy). */
   objectionDeadline: Deadline | null;
+  /** The objection once filed (read-only), else null. */
+  objection: Objection | null;
+  /** True while an objection can still be filed (periodic, none yet, in the term). */
+  objectionOpen: boolean;
 }

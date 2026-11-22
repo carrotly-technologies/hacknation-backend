@@ -1,6 +1,11 @@
 import { Public } from '@nestjs/authentication';
 import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
-import { type ConfirmAckInput, confirmAckSchema } from './ack.schemas.js';
+import {
+  type ConfirmAckInput,
+  confirmAckSchema,
+  type ObjectionInput,
+  objectionSchema,
+} from './ack.schemas.js';
 import { AckService } from './ack.service.js';
 import type { AckDone, AckPending } from './ack.types.js';
 
@@ -25,5 +30,15 @@ export class AckController {
     @Body({ schema: confirmAckSchema }) _body: ConfirmAckInput,
   ): AckDone {
     return this.ack.confirm(token);
+  }
+
+  /** The assessed person's objection (art. 83 ust. 1): once, within 7 days of the acknowledgement. */
+  @Post(':token/objection')
+  @HttpCode(200)
+  object(
+    @Param('token') token: string,
+    @Body({ schema: objectionSchema }) body: ObjectionInput,
+  ): AckDone {
+    return this.ack.object(token, body.text);
   }
 }

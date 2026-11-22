@@ -6,6 +6,7 @@ import {
 import { ackTokenExpired, ackTokenMatches } from '../cases/ack-link.rules.js';
 import { applyAction } from '../cases/actions.rules.js';
 import { CaseRuleError } from '../cases/case-rule.error.js';
+import { objectionOpen, submitObjection } from '../cases/objection.rules.js';
 import type { CaseRecord } from '../cases/case.types.js';
 import { CasesService } from '../cases/cases.service.js';
 import { CompetencyModelService } from '../competency-model/competency-model.service.js';
@@ -81,23 +82,39 @@ export class AckService {
   confirm(token: string): AckDone {
     const record = this.find(token);
     if (record.acknowledgedOn) return this.done(record);
-    let next: CaseRecord;
+    const next = this.run(() =>
+      applyAction(record, 'EMPLOYEE_ACK_ASSESSMENT', this.cases.today),
+    );
+    this.cases.save(next);
+    return this.done(next);
+  }
+
+  /** Records the objection; 409 before the confirmation, after the term or a second time. */
+  object(token: string, text: string): AckDone {
+    const record = this.find(token);
+    const next = this.run(() =>
+      submitObjection(record, text, this.cases.today),
+    );
+    this.cases.save(next);
+    return this.done(next);
+  }
+
+  private run(fn: () => CaseRecord): CaseRecord {
     try {
-      next = applyAction(record, 'EMPLOYEE_ACK_ASSESSMENT', this.cases.today);
+      return fn();
     } catch (error) {
       if (error instanceof CaseRuleError) {
         throw new ConflictException(error.message);
       }
       throw error;
     }
-    this.cases.save(next);
-    return this.done(next);
   }
 
   /**
    * The case whose current token matches. After the confirmation the token
-   * still opens the "potwierdzono" message (but nothing else), even when the
-   * 14 days have passed; a replaced or expired token is unknown.
+   * still opens the "potwierdzono" message and the objection form (but not
+   * the sheet), even when the 14 days have passed; once the objection term is
+   * over it reports that. A replaced or expired token is unknown.
    */
   private find(token: string): CaseRecord {
     const record = this.cases
@@ -116,6 +133,8 @@ export class AckService {
     return {
       acknowledgedOn: record.acknowledgedOn!,
       objectionDeadline: this.cases.detail(record.id).objectionDeadline,
+      objection: record.objection,
+      objectionOpen: objectionOpen(record, this.cases.today),
     };
   }
 }
