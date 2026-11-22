@@ -14,7 +14,8 @@ import {
 } from './auth.helpers.js';
 
 /** Demo logins by account id, so a renamed demo account does not break the test. */
-const loginOf = (id: string) => USER_SEED.find((u) => u.id === id)!.login;
+const seedUser = (id: string) => USER_SEED.find((u) => u.id === id)!;
+const loginOf = (id: string) => seedUser(id).login;
 
 interface Entry {
   id: string;
@@ -83,7 +84,7 @@ describe('Audit log (e2e)', () => {
     const [patch, action] = await latest('?actorId=u-kaminska');
     expect(patch).toMatchObject({
       actorId: 'u-kaminska',
-      actorName: 'Joanna Kamińska',
+      actorName: `${seedUser('u-kaminska').firstName} ${seedUser('u-kaminska').lastName}`,
       actorRole: 'SUPERVISOR',
       action: 'CASE_PATCH',
       actionLabel: 'Zmiana danych w ocenie',
