@@ -1,9 +1,19 @@
 import { Body, Controller, Get, Param, Patch } from '@nestjs/common';
+import {
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { Roles } from '../auth/roles.decorator.js';
 import { type UpdatePerson, updatePersonSchema } from './people.schemas.js';
 import { PeopleService } from './people.service.js';
 import type { PersonProfile } from './people.types.js';
 
+@ApiTags('people')
+@ApiNotFoundResponse({
+  description: 'Nieznany pracownik albo spoza zespołu przełożonego.',
+})
 @Controller('people')
 export class PeopleController {
   constructor(private readonly people: PeopleService) {}
@@ -11,6 +21,11 @@ export class PeopleController {
   /** Employee profile: data, supervisor, assessment history, current case. */
   @Get(':personId')
   @Roles('SUPERVISOR', 'HR')
+  @ApiOperation({
+    summary:
+      'Profil pracownika: dane, przełożony, historia ocen, bieżąca sprawa',
+  })
+  @ApiOkResponse({ description: 'Profil (`PersonProfile`).' })
   profile(@Param('personId') personId: string): Promise<PersonProfile> {
     return this.people.profile(personId);
   }
@@ -18,6 +33,10 @@ export class PeopleController {
   /** Basic employee data, written to every case of the person. */
   @Patch(':personId')
   @Roles('SUPERVISOR', 'HR')
+  @ApiOperation({
+    summary: 'Zmiana podstawowych danych pracownika (we wszystkich sprawach)',
+  })
+  @ApiOkResponse({ description: 'Profil po zmianie (`PersonProfile`).' })
   update(
     @Param('personId') personId: string,
     @Body({ schema: updatePersonSchema }) body: UpdatePerson,

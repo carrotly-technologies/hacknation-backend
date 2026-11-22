@@ -13,6 +13,14 @@ import {
   type DocumentListItem,
   listDocuments,
 } from '../assistant/documents.js';
+import {
+  ApiNotFoundResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiProduces,
+  ApiTags,
+} from '@nestjs/swagger';
 import { contentType, resolveDocFile } from './docs-files.js';
 
 /**
@@ -21,16 +29,31 @@ import { contentType, resolveDocFile } from './docs-files.js';
  * documents linked from answers and opened in a new tab, where no Bearer
  * token can be sent.
  */
+@ApiTags('docs')
 @Can.Anyone()
 @Controller('docs')
 export class DocsController {
   @Get()
+  @ApiOperation({ summary: 'Lista dokumentów źródłowych' })
+  @ApiOkResponse({
+    description: 'Dokumenty (jak GET /api/assistant/documents).',
+  })
   list(): DocumentListItem[] {
     return listDocuments();
   }
 
   @Get('*path')
   @Public()
+  @ApiOperation({
+    summary: 'Oryginalny plik dokumentu z docs/ (bez logowania)',
+  })
+  @ApiParam({
+    name: 'path',
+    description: 'Ścieżka pliku względem docs/, np. `ustawa/ustawa.pdf`.',
+  })
+  @ApiProduces('application/pdf', 'text/markdown', 'application/octet-stream')
+  @ApiOkResponse({ description: 'Plik.' })
+  @ApiNotFoundResponse({ description: 'Nie ma takiego dokumentu.' })
   file(@Param('path') path: string | string[]): StreamableFile {
     const rel = Array.isArray(path) ? path.join('/') : path;
     const abs = resolveDocFile(rel);
