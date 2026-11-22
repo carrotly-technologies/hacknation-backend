@@ -13,6 +13,7 @@ pracy; Kodeksu nie ma w `docs/`). Aplikacja trzyma tylko kopię roboczą, więc 
 | Notatka przełożonego (dziennik) | `RETENTION_YEARS` | ostatniej zmiany notatki | usunięcie |
 | Obserwacja S-D-R (dziennik) | `RETENTION_YEARS` | daty obserwacji | usunięcie |
 | Link dla ocenianego | 14 dni (ważność) | wysłania | nieważny; token usuwany przy anonimizacji |
+| Dziennik aktywności (`request_log`: IP, przeglądarka, login, ścieżki) | 30 dni | wpisu | usunięcie (przy starcie i co 24 h, `src/monitor`) |
 | Pytania do asystenta | nie są przechowywane | | |
 | Konta użytkowników | do usunięcia przez administratora | | |
 

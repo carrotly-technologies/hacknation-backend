@@ -36,6 +36,7 @@ nie wpisywać.
 | Konta | login, imię, nazwisko, rola, stanowisko, komórka, skrót hasła scrypt | administrator aplikacji | administrator (bez skrótów haseł), użytkownik sam o sobie | przez okres pełnienia funkcji; usuwa administrator |
 | Link dla ocenianego | losowy token (32 bajty), data ważności | aplikacja | nikt w API (oceniający widzi tylko link do przekazania) | 14 dni; po zapoznaniu link otwiera tylko potwierdzenie; usuwany przy anonimizacji |
 | Dziennik zdarzeń | kto (id konta i rola), co (nazwa akcji i nazwy zmienionych pól, bez ich treści), kiedy, zasób (id sprawy, pracownika, konta), adres IP, wynik (`audit_log`) | aplikacja, przy każdej zmianie danych i każdym logowaniu | tylko administrator aplikacji | bezterminowo (wpisów nie da się zmienić ani usunąć: trigger w bazie, łańcuch skrótów); okres retencji ustala urząd |
+| Dziennik aktywności (`src/monitor`) | adres IP, przeglądarka (User-Agent), losowy identyfikator sesji karty, login konta, metoda, ścieżka, status i czas wywołań API oraz odwiedzone ekrany; bez treści żądań i odpowiedzi, bez tokenów linków | aplikacja | tylko osoba znająca `MONITOR_TOKEN` (zespół utrzymujący aplikację); bez tokenu trasa nie istnieje | 30 dni, potem usuwane (przy starcie i co dobę) |
 | Pytania do asystenta | treść pytania, historia czatu z bieżącej sesji | użytkownik | nikt: nie są zapisywane ani logowane | czas trwania żądania |
 
 ## Gdzie to jest w kodzie
