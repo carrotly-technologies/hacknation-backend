@@ -20,7 +20,8 @@
     "test:debug": "vitest --inspect-brk --no-file-parallelism",
     "test:e2e": "vitest run --config ./vitest.config.e2e.ts",
     "eval:assistant": "vitest run --config ./vitest.config.eval.ts --disable-console-intercept",
-    "kb:build": "node scripts/build-knowledge-base.mjs"
+    "kb:build": "node scripts/build-knowledge-base.mjs",
+    "retention": "node dist/retention/retention.cli.js"
   },
   "dependencies": {
     "@nestjs/authentication": "^0.1.7",

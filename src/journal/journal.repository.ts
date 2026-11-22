@@ -48,6 +48,13 @@ export abstract class JournalRepository {
     notes: JournalNote[],
     observations: JournalObservation[],
   ): Promise<void>;
+  /**
+   * Retention (src/retention): deletes notes last changed and observations
+   * dated before `cutoff` (YYYY-MM-DD); returns how many were deleted.
+   */
+  abstract deleteOlderThan(
+    cutoff: string,
+  ): Promise<{ notes: number; observations: number }>;
 }
 
 export function newestNotesFirst(a: JournalNote, b: JournalNote): number {

@@ -89,4 +89,25 @@ export class InMemoryJournalRepository extends JournalRepository {
     this.notes = new Map(notes.map((n) => [n.id, { ...n }]));
     this.observations = new Map(observations.map((o) => [o.id, { ...o }]));
   }
+
+  async deleteOlderThan(cutoff: string) {
+    const drop = (map: Map<string, unknown>, ids: string[]) => {
+      for (const id of ids) map.delete(id);
+      return ids.length;
+    };
+    return {
+      notes: drop(
+        this.notes,
+        [...this.notes.values()]
+          .filter((n) => n.updatedAt.slice(0, 10) < cutoff)
+          .map((n) => n.id),
+      ),
+      observations: drop(
+        this.observations,
+        [...this.observations.values()]
+          .filter((o) => o.date < cutoff)
+          .map((o) => o.id),
+      ),
+    };
+  }
 }

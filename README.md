@@ -20,6 +20,8 @@ cp .env.example .env   # optional, defaults work out of the box
 | `JWT_SECRET`        | dev-only default        | HS256 key for sign-in tokens (32+ bytes: `openssl rand -base64 32`); without it a warning is logged |
 | `DATABASE_URL`      | (unset)                 | PostgreSQL URL; unset = in-memory storage (lost on restart)     |
 | `OFFICE_PLACE`      | `Warszawa` (demo)       | "miejscowość" printed next to signature dates in the downloaded sheet (PDF/DOCX) |
+| `DATA_ENCRYPTION_KEY` | dev-only default      | AES-256-GCM key for free text stored in PostgreSQL (32 bytes base64: `openssl rand -base64 32`); without it a warning is logged. Set it in production and keep it outside the database |
+| `RETENTION_YEARS`   | `10`                    | Cases that ended (and journal entries) more than this many years ago are anonymized / deleted |
 
 ### Database (optional)
 
@@ -32,6 +34,31 @@ DATABASE_URL=postgres://hacknation:hacknation@localhost:5432/hacknation npm run 
 startup, before the first request. After changing a `src/**/*.tables.ts` schema run
 `npx drizzle-kit generate --name=<change>` and commit the generated folder. Without `DATABASE_URL` every module uses
 in-memory storage.
+
+### RODO: minimisation, encryption, retention
+
+Documentation for the office (in Polish): [`docs/rodo/`](docs/rodo/): the record of processing
+([`rejestr-przetwarzania.md`](docs/rodo/rejestr-przetwarzania.md)), the DPIA with TLS and encryption
+([`dpia.md`](docs/rodo/dpia.md)) and the retention policy ([`retencja.md`](docs/rodo/retencja.md)).
+
+- **Encryption at rest** (`src/crypto/field-cipher.ts`): the journal's free text (`journal_notes.text`,
+  `journal_observations.situation/action/result`) is stored as `v1:<iv>:<tag>:<ciphertext>` (AES-256-GCM, a fresh IV
+  per value, `v1` = key version) and decrypted on read. At startup, after the schema migrations, rows still in plain
+  text (or under the dev key, once `DATA_ENCRYPTION_KEY` is set) are encrypted with the current key; a second start
+  changes nothing. Cases are in memory in this version, so nothing of them is at rest.
+- **Retention** (`src/retention`): cases that ended (objection term over, or acknowledged for a first assessment)
+  more than `RETENTION_YEARS` ago are anonymized (person „Osoba zanonimizowana”, free text and history removed,
+  scores and dates kept); journal notes last changed and observations dated before that are deleted. Runs at
+  startup and every 24 h; on demand:
+
+  ```bash
+  npm run build && npm run retention     # prints { cutoff, casesAnonymized, journalNotesDeleted, ... }
+  docker exec <container> node dist/retention/retention.cli.js
+  ```
+
+- **Minimisation**: each view returns only what its reader needs (`GET /api/ack/:token` exactly what the sheet
+  prints, lists without assessment texts, no token or password hash in any response); `test/rodo.e2e-spec.ts`
+  checks it.
 
 ## Run
 
@@ -292,7 +319,8 @@ as the `hacknation-backend` application, built from this repo's `Dockerfile`:
 
 - URL: <https://api.hacknation.rabbithole.carrotly.tech> (health: `/api/health`)
 - Every push to `main` triggers a new deploy (GitHub App source, auto-deploy on).
-- Env: `PORT=3000`, `FRONTEND_URL=https://hacknation.rabbithole.carrotly.tech`, `JWT_SECRET` (32+ random bytes).
+- Env: `PORT=3000`, `FRONTEND_URL=https://hacknation.rabbithole.carrotly.tech`, `JWT_SECRET` (32+ random bytes),
+  `DATA_ENCRYPTION_KEY` (32 random bytes, base64; without it the dev key is used and a warning is logged).
   Change them in the Coolify app settings and redeploy.
 
 Build and run the image locally:
