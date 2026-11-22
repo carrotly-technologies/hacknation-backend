@@ -26,6 +26,11 @@ import {
 } from './ack.schemas.js';
 import { AckService } from './ack.service.js';
 import type { AckDone, AckPending } from './ack.types.js';
+import { idParam } from '../security/params.schemas.js';
+import { LoginRateLimit } from '../security/rate-limit.decorator.js';
+
+const TOO_MANY_ACK =
+  'Zbyt wiele prób potwierdzenia. Spróbuj ponownie za minutę.';
 
 /**
  * Public page of the assessed person: the link the evaluator generates with
@@ -49,11 +54,14 @@ export class AckController {
   @ApiOkResponse({
     description: 'Arkusz albo data zapoznania się i termin sprzeciwu.',
   })
-  read(@Param('token') token: string): AckPending | AckDone {
+  read(
+    @Param('token', { schema: idParam }) token: string,
+  ): AckPending | AckDone {
     return this.ack.read(token);
   }
 
   @Post(':token')
+  @LoginRateLimit(TOO_MANY_ACK)
   @HttpCode(200)
   @ApiOperation({
     summary: 'Potwierdzenie zapoznania się z oceną przez ocenianego',
@@ -63,7 +71,7 @@ export class AckController {
       'Data zapoznania się i termin sprzeciwu (ponowne potwierdzenie zwraca pierwszą datę).',
   })
   confirm(
-    @Param('token') token: string,
+    @Param('token', { schema: idParam }) token: string,
     @Body({ schema: confirmAckSchema }) _body: ConfirmAckInput,
     @Req() req: Request,
   ): AckDone {
@@ -74,6 +82,7 @@ export class AckController {
 
   /** The assessed person's objection (art. 83 ust. 1): once, within 7 days of the acknowledgement. */
   @Post(':token/objection')
+  @LoginRateLimit(TOO_MANY_ACK)
   @HttpCode(200)
   @ApiOperation({
     summary: 'Sprzeciw od oceny okresowej (art. 83 ust. 1, raz, w ciągu 7 dni)',
@@ -84,7 +93,7 @@ export class AckController {
       'Przed zapoznaniem się, po terminie, przy ocenie pierwszej albo ponownie.',
   })
   object(
-    @Param('token') token: string,
+    @Param('token', { schema: idParam }) token: string,
     @Body({ schema: objectionSchema }) body: ObjectionInput,
     @Req() req: Request,
   ): AckDone {

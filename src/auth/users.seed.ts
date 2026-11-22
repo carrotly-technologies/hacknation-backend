@@ -7,7 +7,7 @@ import type { User } from './user.types.js';
  * sign-in; they never leave the repository through the API.
  * Supervisors are linked to EVALUATORS in src/cases/seed/seed.data.ts.
  */
-export const USER_SEED: readonly (User & {
+export const USER_SEED: readonly (Omit<User, 'tokenVersion'> & {
   passwordHash: string;
   pesel: string;
 })[] = [

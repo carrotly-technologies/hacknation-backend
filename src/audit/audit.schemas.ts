@@ -31,7 +31,7 @@ const positiveInt = (name: string, max?: number) => {
 };
 
 /** GET /api/admin/audit. `from`/`to` are inclusive; the frontend sends the local day's bounds. */
-export const auditQuerySchema = z.object({
+export const auditQuerySchema = z.strictObject({
   actorId: z.string().trim().min(1).max(200).optional(),
   action: z
     .string()

@@ -18,11 +18,11 @@ const indicatorPoints = z
   )
   .nullable();
 
-export const suggestLevelSchema = z.object({
+export const suggestLevelSchema = z.strictObject({
   sheetId,
   competencyId: z.string().min(1),
   indicatorRatings: z.array(
-    z.object({
+    z.strictObject({
       indicatorId: z.string().min(1),
       points: indicatorPoints,
     }),
@@ -30,16 +30,16 @@ export const suggestLevelSchema = z.object({
 });
 export type SuggestLevelRequest = z.infer<typeof suggestLevelSchema>;
 
-export const evaluateSchema = z.object({
+export const evaluateSchema = z.strictObject({
   sheetId,
   scores: z.array(
-    z.object({
+    z.strictObject({
       criterionId: z.string().min(1),
       points: z.number(),
     }),
   ),
   firstAssessment: z
-    .object({
+    .strictObject({
       examPassed: z.enum(['YES', 'NO', 'NOT_APPLICABLE'], {
         error:
           'examPassed musi mieć jedną z wartości: YES, NO, NOT_APPLICABLE.',

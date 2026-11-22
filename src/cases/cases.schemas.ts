@@ -30,7 +30,7 @@ const grade = (what: string) =>
     .optional();
 
 /** POST /cases: a new assessment case for a person. */
-export const createCaseSchema = z.object({
+export const createCaseSchema = z.strictObject({
   personId: z.string().trim().min(1, { error: 'Wskaż pracownika (personId).' }),
 });
 export type CreateCase = z.infer<typeof createCaseSchema>;
@@ -43,20 +43,20 @@ const MOTIVATION_MAX = 4000;
  * keys stored); ratings are merged per indicator. In `decisions` and
  * `deviationNotes` a null value removes the key. Dates confirmed by actions
  * (confirmedByEvaluatorOn, acknowledgedByEmployeeOn, reportSubmittedOn) are
- * set by actions only and ignored here.
+ * set by actions only: like any field not listed here, they answer 400.
  */
-export const patchCaseSchema = z.object({
+export const patchCaseSchema = z.strictObject({
   sheetId: z
     .enum(SHEET_IDS, {
       error: 'sheetId musi mieć jedną z wartości: A, B, C, FIRST.',
     })
     .optional(),
   partI: z
-    .object({
+    .strictObject({
       additionalCriteria: z.array(z.string().min(1)).optional(),
       assessmentDue: isoDate.nullable().optional(),
       topics: z
-        .object({
+        .strictObject({
           duties: z.string(),
           criteria: z.string(),
           expectations: z.string(),
@@ -74,7 +74,7 @@ export const patchCaseSchema = z.object({
   iprz: z.string().optional(),
   /** Part II item 10 of the sheet; null clears it. */
   previousAssessment: z
-    .object({
+    .strictObject({
       result: z
         .enum(['POSITIVE', 'NEGATIVE'], {
           error:
@@ -89,7 +89,7 @@ export const patchCaseSchema = z.object({
     .optional(),
   /** Part II item 11 and part III of the sheet. */
   promotionRequest: z
-    .object({
+    .strictObject({
       attached: z
         .enum(['YES', 'NO', 'NOT_APPLICABLE'], {
           error:
@@ -112,7 +112,7 @@ export const patchCaseSchema = z.object({
     .partial()
     .optional(),
   firstConditions: z
-    .object({
+    .strictObject({
       examPassed: z
         .enum(['YES', 'NO', 'NOT_APPLICABLE'], {
           error:
@@ -126,7 +126,7 @@ export const patchCaseSchema = z.object({
 });
 export type PatchCase = z.infer<typeof patchCaseSchema>;
 
-export const observationSchema = z.object({
+export const observationSchema = z.strictObject({
   date: isoDate,
   criterionId: z.string().min(1),
   indicatorId: z.string().min(1).nullable(),
@@ -140,7 +140,7 @@ export const observationSchema = z.object({
 });
 export type ObservationInput = z.infer<typeof observationSchema>;
 
-export const actionSchema = z.object({
+export const actionSchema = z.strictObject({
   action: z.enum(CASE_ACTIONS as [string, ...string[]], {
     error: `action musi mieć jedną z wartości: ${CASE_ACTIONS.join(', ')}.`,
   }),
@@ -149,7 +149,7 @@ export const actionSchema = z.object({
 });
 export type ActionInput = z.infer<typeof actionSchema>;
 
-export const remindersSchema = z.object({
+export const remindersSchema = z.strictObject({
   caseIds: z
     .array(z.string().min(1))
     .min(1, { error: 'Podaj co najmniej jedną sprawę.' }),

@@ -1,7 +1,7 @@
 import { z } from 'zod';
 import { ROLES } from '../auth/user.types.js';
 
-export const updateUserSchema = z.object({
+export const updateUserSchema = z.strictObject({
   role: z.enum(ROLES, {
     error: `Rola musi być jedną z: ${ROLES.join(', ')}.`,
   }),

@@ -17,7 +17,7 @@ const sdr = (label: string) =>
       error: `Opis (${label}) może mieć najwyżej ${SDR_MAX} znaków.`,
     });
 
-export const noteSchema = z.object({
+export const noteSchema = z.strictObject({
   text: z
     .string({ error: 'Podaj treść notatki.' })
     .trim()
@@ -45,11 +45,13 @@ const observationFields = {
   result: sdr('rezultat (R)'),
 };
 
-export const observationSchema = z.object({
+export const observationSchema = z.strictObject({
   ...observationFields,
   indicatorId: observationFields.indicatorId.optional().default(null),
 });
 export type JournalObservationInput = z.infer<typeof observationSchema>;
 
-export const observationPatchSchema = z.object(observationFields).partial();
+export const observationPatchSchema = z
+  .strictObject(observationFields)
+  .partial();
 export type JournalObservationPatch = z.infer<typeof observationPatchSchema>;

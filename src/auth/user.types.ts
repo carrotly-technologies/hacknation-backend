@@ -12,6 +12,11 @@ export interface User {
   unit: string;
   /** The EVALUATORS id whose cases a SUPERVISOR handles; null for others. */
   evaluatorId: string | null;
+  /**
+   * Signed into every token (`tv` claim). Raised when an ADMIN changes the
+   * role, which ends the user's sessions: they sign in again with the new one.
+   */
+  tokenVersion: number;
 }
 
 /** What the users API returns: the account without internal links. */

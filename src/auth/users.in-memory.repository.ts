@@ -9,7 +9,7 @@ type Row = User & { passwordHash: string; pesel: string };
 @Injectable()
 export class InMemoryUsersRepository extends UsersRepository {
   private readonly rows = new Map<string, Row>(
-    USER_SEED.map((row) => [row.id, { ...row }]),
+    USER_SEED.map((row) => [row.id, { ...row, tokenVersion: 0 }]),
   );
 
   findById(id: string): Promise<User | null> {
@@ -39,7 +39,10 @@ export class InMemoryUsersRepository extends UsersRepository {
   updateRole(id: string, role: Role): Promise<User | null> {
     const row = this.rows.get(id);
     if (!row) return Promise.resolve(null);
-    row.role = role;
+    if (row.role !== role) {
+      row.role = role;
+      row.tokenVersion += 1;
+    }
     return Promise.resolve(publicUser(row));
   }
 }

@@ -53,8 +53,8 @@ const caseAction = (body: unknown): string => {
  */
 export const AUDITED_ROUTES: Readonly<Record<string, RouteSpec>> = {
   'POST /auth/login': 'EXPLICIT',
-  // Tokens are stateless: logout changes nothing on the server.
-  'POST /auth/logout': 'SKIP',
+  // Sign-out revokes the token sent with it (src/auth/revoked-tokens.service.ts).
+  'POST /auth/logout': { action: 'LOGOUT', resourceType: 'USER' },
   // Simulated login.gov.pl: start and the mock identity provider change no
   // data (the body carries a PESEL: never logged); the exchange logs itself.
   'POST /auth/login-gov/start': 'SKIP',
@@ -62,6 +62,11 @@ export const AUDITED_ROUTES: Readonly<Record<string, RouteSpec>> = {
   'POST /auth/login-gov': 'EXPLICIT',
   // A pageview only feeds the activity log (src/monitor); it changes no data.
   'POST /telemetry/pageview': 'SKIP',
+  // Clearing the activity log (X-Monitor-Token, src/monitor) is itself recorded here.
+  'DELETE /monitor/sessions': {
+    action: 'MONITOR_LOG_CLEARED',
+    resourceType: null,
+  },
   'POST /assessments/suggest-level': 'SKIP',
   'POST /assessments/evaluate': 'SKIP',
   'POST /assistant/ask': 'SKIP',
@@ -183,6 +188,8 @@ const FIXED_LABELS: Readonly<Record<string, string>> = {
   LOGIN_FAILED: 'Nieudane logowanie',
   LOGIN_GOV: 'Logowanie przez login.gov.pl (symulacja)',
   LOGIN_GOV_FAILED: 'Nieudane logowanie przez login.gov.pl (symulacja)',
+  LOGOUT: 'Wylogowanie',
+  MONITOR_LOG_CLEARED: 'Wyczyszczenie dziennika aktywności (monitor)',
   CASE_CREATE: 'Rozpoczęcie nowej oceny',
   CASE_PATCH: 'Zmiana danych w ocenie',
   CASE_OBSERVATION_ADD: 'Dodanie obserwacji do oceny',

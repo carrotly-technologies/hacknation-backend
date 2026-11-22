@@ -23,6 +23,10 @@ cp .env.example .env   # optional, defaults work out of the box
 | `DATA_ENCRYPTION_KEY` | dev-only default      | AES-256-GCM key for free text stored in PostgreSQL (32 bytes base64: `openssl rand -base64 32`); without it a warning is logged. Set it in production and keep it outside the database |
 | `RETENTION_YEARS`   | `10`                    | Cases that ended (and journal entries) more than this many years ago are anonymized / deleted |
 | `MONITOR_TOKEN`     | (unset)                 | Secret of the activity monitor (`X-Monitor-Token`, frontend `/aktywnosc`); unset = `/api/monitor/*` answers 404 |
+| `RATE_LIMIT_PER_MINUTE` | `100`              | Requests per minute per route and client (signed-in account, otherwise IP); more → 429 |
+| `RATE_LIMIT_LOGIN_PER_MINUTE` | `5`          | Sign-in attempts (`POST /api/auth/login`) and assessed-person confirmations (`POST /api/ack/*`) per minute per IP |
+| `TRUST_PROXY`       | `loopback, linklocal, uniquelocal` | Express `trust proxy`: proxies whose `X-Forwarded-For` gives the client IP (default: any on a private network, e.g. Coolify/nginx in front of the container); `false` when clients connect directly |
+| `BODY_LIMIT`        | `1mb`                   | Largest request body; bigger answers 413                        |
 
 ### Database (optional)
 
@@ -108,7 +112,7 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 | Route                        | What it does                                                                         |
 | ---------------------------- | ------------------------------------------------------------------------------------ |
 | `POST /api/auth/login`       | `{ login, password }` → `{ accessToken, tokenType, expiresIn, user }`; JWT HS256, 8 h |
-| `POST /api/auth/logout`      | No-op (204): tokens are stateless, the client drops its token                        |
+| `POST /api/auth/logout`      | 204; ends the session of the token sent with it (refused from then on, 401). Without a token: no-op 204 |
 | `POST /api/auth/login-gov/start` | Simulated login.gov.pl: → `{ redirectUrl, state }`; `state` = 32 random bytes (base64url), valid 5 min; `redirectUrl` = `${FRONTEND_URL}/mock-login-gov?state=…` |
 | `POST /api/auth/login-gov/mock-authorize` | The mock identity provider: `{ state, pesel, method: 'profil-zaufany' \| 'mobywatel' \| 'bank' }` → `{ artifact }`, one-time, valid 60 s; one artifact per state; 400 for an unknown or expired state, an invalid PESEL or method |
 | `POST /api/auth/login-gov`   | `{ artifact, state }` → same body as `POST /api/auth/login` (token `method: 'login.gov.pl'`); 400 bad or expired state, 401 used or expired artifact, 401 „Brak konta dla tej osoby.” for an unknown PESEL |
@@ -126,8 +130,11 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 | `ADMIN`      | `/api/admin/*` (users, audit log), `POST /api/demo/reset` (also HR)                                   | cases, `/api/team`, `/api/hr/*`, journal                  |
 | every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP                         | —                                                         |
 
-- The role is read from the account on every request, never from the token: a role changed by an ADMIN applies to
-  that user's next request (the frontend picks it up at the next sign-in).
+- The role is read from the account on every request, never from the token. A role changed by an ADMIN also ends
+  that user's sessions (`tokenVersion`, claim `tv`): their next request answers 401 and they sign in again with the
+  new role.
+- Tokens: HS256 only (`alg: none` and other algorithms answer 401), `exp` checked, 8 h. Sign-out revokes the token's
+  `jti` until it expires.
 - Passwords are scrypt hashes (`PasswordHasher` of `@nestjs/authentication`, Node's `crypto.scrypt`); a wrong
   password and an unknown login get the same 401. `node scripts/hash-password.mjs <password>` prints a hash.
 - Accounts sit behind `UsersRepository` (`src/auth/users.repository.ts`); the in-memory implementation
@@ -174,6 +181,21 @@ All people are fictional.
 | `j.kuchta`             | `Kompas2026!` | `SUPERVISOR` | Jolanta Kuchta, 2 cases (c-103, c-104)       |
 | `a.cieslak-dyjecinska` | `Kompas2026!` | `HR`         | Agata Cieślak-Dyjecińska, HR (kadry)         |
 | `admin`                | `Kompas2026!` | `ADMIN`      | Marek Zając, administrator                   |
+
+### Security (OWASP ASVS L2)
+
+Checklist with status and code paths: [`docs/security/asvs-l2.md`](docs/security/asvs-l2.md).
+
+- Headers (`helmet`, `src/configure-app.ts`): `X-Content-Type-Options`, `X-Frame-Options: DENY`, HSTS,
+  `Referrer-Policy`, COOP, no `X-Powered-By`, `Cache-Control: no-store` (except the public `/api/docs/<path>` files).
+  No CSP on the JSON API; the frontend's nginx sends the CSP.
+- Rate limits (`src/security/rate-limit.module.ts`, `@nestjs/throttler`): 429 with `Retry-After` and a Polish
+  `message`, e.g. „Zbyt wiele prób logowania. Spróbuj ponownie za minutę.”. Counts live in process memory: with
+  several instances each counts on its own.
+- Validation: every body is a strict zod schema (unknown fields answer 400), every `:id`/`:personId`/`:token`
+  matches `[A-Za-z0-9_-]{1,128}` (`src/security/params.schemas.ts`), bodies over `BODY_LIMIT` answer 413.
+- `test/rbac.e2e-spec.ts` checks 401 and 403 for every route against its role table and fails when a new route has no
+  row there.
 
 ## API
 
@@ -321,7 +343,8 @@ checks in the app (`/admin/dziennik` in the frontend). Reads are not logged.
   the response (`src/audit/audit-actions.ts` maps each route to its action and resource; an e2e test fails when a new
   data-changing route is missing there). A change a role guard refuses (403) never reaches an interceptor, so a
   middleware records it when the response is sent. Sign-in writes `LOGIN` / `LOGIN_FAILED` itself. Computations
-  (`POST /api/assessments/*`, `POST /api/assistant/ask`) and logout change nothing and are not logged.
+  (`POST /api/assessments/*`, `POST /api/assistant/ask`) change nothing and are not logged; logout is logged as
+  `LOGOUT` (it revokes the token).
 - RODO, data minimisation: `changedFields` holds the names of the top-level fields sent (`["ratings",
   "justification"]`), never their values: no ratings, justifications, notes, objection texts or passwords. A failed
   sign-in stores the id of the targeted account (`resourceId`, `null` for an unknown login), never the login typed.

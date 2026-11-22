@@ -1,13 +1,16 @@
 import { Public } from '@nestjs/authentication';
 import { Controller, Get } from '@nestjs/common';
 import { ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { SkipThrottle } from '@nestjs/throttler';
 
 export interface HealthResponse {
   status: 'ok';
 }
 
+/** Probed by Docker and the proxy: never rate limited. */
 @ApiTags('health')
 @Public()
+@SkipThrottle()
 @Controller('health')
 export class HealthController {
   @Get()
