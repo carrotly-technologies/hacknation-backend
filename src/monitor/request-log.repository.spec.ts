@@ -84,6 +84,11 @@ describe.each([
     expect(await repo.deleteOlderThan('2026-11-22T00:00:00.000Z')).toBe(1);
     expect((await repo.list({})).map((e) => e.id)).toEqual(['a', 'b']);
   });
+
+  it('deletes every entry', async () => {
+    expect(await repo.deleteAll()).toBe(3);
+    expect(await repo.list({})).toEqual([]);
+  });
 });
 
 describe('InMemoryRequestLogRepository', () => {

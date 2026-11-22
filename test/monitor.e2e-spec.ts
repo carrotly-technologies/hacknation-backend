@@ -261,6 +261,25 @@ describe('Monitor: activity log and sessions (e2e)', () => {
     const { entries } = await sessionEntries(sessionId, 1);
     expect(entries.map((e) => e.path)).toEqual(['/api/config']);
   });
+
+  it('DELETE /api/monitor/sessions clears the whole log, only with the token', async () => {
+    await request(server())
+      .get('/api/config')
+      .set('X-Session-Id', randomUUID())
+      .expect(200);
+    await request(server()).delete('/api/monitor/sessions').expect(404);
+    await request(server())
+      .delete('/api/monitor/sessions')
+      .set('X-Monitor-Token', 'zly-token')
+      .expect(404);
+    const res = await request(server())
+      .delete('/api/monitor/sessions')
+      .set('X-Monitor-Token', TOKEN)
+      .expect(200);
+    expect((res.body as { removed: number }).removed).toBeGreaterThan(0);
+    const page = (await monitor('/sessions').expect(200)).body as SessionPage;
+    expect(page.total).toBe(0);
+  });
 });
 
 describe('Monitor without MONITOR_TOKEN (e2e)', () => {
