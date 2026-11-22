@@ -1,3 +1,4 @@
+import { STAGE_NAMES } from '../cases/case.rules.js';
 import type { CaseDetail, StageId } from '../cases/case.types.js';
 import {
   COMPETENCY_MODEL,
@@ -49,7 +50,7 @@ export function caseCriteria(detail: CaseDetail): string[] {
  */
 export function caseContext(detail: CaseDetail, stage: StageId): string {
   const lines = [
-    `Ścieżka: ${detail.path === 'FIRST' ? 'pierwsza ocena' : 'ocena okresowa'}; arkusz: ${detail.sheetId ?? 'nie wybrano'}; etap: ${stage}.`,
+    `Ścieżka: ${detail.path === 'FIRST' ? 'pierwsza ocena' : 'ocena okresowa'}; arkusz: ${detail.sheetId ?? 'nie wybrano'}; etap: ${STAGE_NAMES[stage]}.`,
     `Stanowisko ocenianego: ${detail.person.position} (${detail.person.unit}).`,
     `Kryteria: ${caseCriteria(detail).map(criterionName).join('; ')}.`,
   ];
@@ -92,7 +93,7 @@ export function conversationTemplate(
 ): string {
   const criteria = caseCriteria(detail);
   const out: string[] = [
-    `Propozycje do rozmowy (etap: ${stage}, stanowisko: ${detail.person.position}). To podpowiedzi – zakres rozmowy i ocenę ustala oceniający.`,
+    `Propozycje do rozmowy (etap: ${STAGE_NAMES[stage].toLowerCase()}, stanowisko: ${detail.person.position}). To podpowiedzi – zakres rozmowy i ocenę ustala oceniający.`,
     '',
     'Pytania do rozmowy:',
   ];
