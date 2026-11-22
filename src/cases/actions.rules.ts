@@ -31,7 +31,7 @@ import { formalCheck } from './formal-check.rules.js';
 import { nextCycleStart } from './stages.rules.js';
 
 export const ACTION_LABELS: Record<CaseAction, string> = {
-  ACCEPT_OSP_ANALYSIS: 'Zatwierdź analizę opisu stanowiska',
+  ACCEPT_OSP_ANALYSIS: 'Przeprowadź analizę stanowiska',
   ACCEPT_SHEET: 'Akceptuj formularz',
   CONFIRM_PART_I: 'Zatwierdź część I',
   EMPLOYEE_ACK_PART_I: 'Oceniany potwierdził zapoznanie z częścią I',
@@ -91,18 +91,18 @@ export function actionBlocker(
   switch (action) {
     case 'ACCEPT_OSP_ANALYSIS':
       if (stage !== 'OSP_ANALYSIS') {
-        return `Analiza opisu stanowiska została już zatwierdzona${record.completedOn.OSP_ANALYSIS ? ` ${formatDatePl(record.completedOn.OSP_ANALYSIS)}` : ''}; sprawa jest na ${here}.`;
+        return `Analiza stanowiska została już przeprowadzona${record.completedOn.OSP_ANALYSIS ? ` ${formatDatePl(record.completedOn.OSP_ANALYSIS)}` : ''}; sprawa jest na ${here}.`;
       }
       if (!record.sheetId) {
         const osp = findOsp(record.ospId);
         if (!osp || !analyseOsp(osp).suggestedSheet) {
-          return 'Nie można ustalić arkusza z opisu stanowiska: wybierz arkusz (pole sheetId), a potem zatwierdź analizę.';
+          return 'Nie można ustalić arkusza z opisu stanowiska: wybierz arkusz (pole sheetId), a potem przeprowadź analizę stanowiska.';
         }
       }
       return null;
     case 'ACCEPT_SHEET':
       if (stage === 'OSP_ANALYSIS') {
-        return 'Najpierw zatwierdź analizę opisu stanowiska; na jej podstawie system zaproponuje formularz oceny.';
+        return 'Najpierw przeprowadź analizę stanowiska; na jej podstawie system zaproponuje formularz oceny.';
       }
       if (stage !== 'SHEET_PROPOSAL') {
         return `Formularz oceny został już zaakceptowany${record.completedOn.SHEET_PROPOSAL ? ` ${formatDatePl(record.completedOn.SHEET_PROPOSAL)}` : ''}; sprawa jest na ${here}.`;
@@ -113,7 +113,7 @@ export function actionBlocker(
       return null;
     case 'CONFIRM_PART_I':
       if (stage === 'OSP_ANALYSIS' || stage === 'SHEET_PROPOSAL') {
-        return 'Najpierw zatwierdź analizę opisu stanowiska i zaakceptuj formularz oceny; dopiero potem można zatwierdzić część I.';
+        return 'Najpierw przeprowadź analizę stanowiska i zaakceptuj formularz oceny (etap „Analiza stanowiska”); dopiero potem można zatwierdzić część I.';
       }
       if (stage !== 'OPENING_TALK') {
         return `Część I jest już zatwierdzona${record.partI.confirmedByEvaluatorOn ? ` (${formatDatePl(record.partI.confirmedByEvaluatorOn)})` : ''}; sprawa jest na ${here}.`;
@@ -125,7 +125,7 @@ export function actionBlocker(
     case 'EMPLOYEE_ACK_PART_I':
       if (stage !== 'OPENING_TALK') {
         return stage === 'OSP_ANALYSIS' || stage === 'SHEET_PROPOSAL'
-          ? 'Najpierw zatwierdź analizę opisu stanowiska, zaakceptuj formularz i przeprowadź rozmowę rozpoczynającą.'
+          ? 'Najpierw przeprowadź analizę stanowiska, zaakceptuj formularz (etap „Analiza stanowiska”) i przeprowadź rozmowę rozpoczynającą.'
           : `Oceniany już potwierdził zapoznanie z częścią I${record.partI.acknowledgedByEmployeeOn ? ` (${formatDatePl(record.partI.acknowledgedByEmployeeOn)})` : ''}.`;
       }
       if (!record.partI.confirmedByEvaluatorOn) {
@@ -241,7 +241,7 @@ export function applyAction(
       next.stage = 'SHEET_PROPOSAL';
       next.completedOn.OSP_ANALYSIS = today;
       log(
-        `Zatwierdzono analizę opisu stanowiska. Proponowany formularz: arkusz ${next.sheetId}${next.partI.additionalCriteria.length > 0 ? `, ${next.partI.additionalCriteria.length} kandydat(ów) na kryteria dodatkowe` : ''}.`,
+        `Przeprowadzono analizę stanowiska. Wynik analizy: arkusz ${next.sheetId}; kryteria dodatkowe wybiera oceniający.`,
       );
       break;
     }

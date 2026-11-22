@@ -151,8 +151,8 @@ describe('periodic state machine', () => {
 
 describe('illegal transitions', () => {
   it.each<[string, CaseAction, string]>([
-    ['c-002', 'CONFIRM_PART_I', 'analizę opisu stanowiska'],
-    ['c-002', 'ACCEPT_SHEET', 'Najpierw zatwierdź analizę'],
+    ['c-002', 'CONFIRM_PART_I', 'analizę stanowiska'],
+    ['c-002', 'ACCEPT_SHEET', 'Najpierw przeprowadź analizę stanowiska'],
     ['c-001', 'ACCEPT_SHEET', 'już zaakceptowany'],
     ['c-004', 'ACCEPT_SHEET', 'tylko oceny okresowej'],
     [

@@ -62,7 +62,7 @@ function stageDeadlineSpec(
     case 'OSP_ANALYSIS':
       return {
         ...openingTalkDeadline(record.cycleStart),
-        label: 'Analiza OSP przed rozmową rozpoczynającą, najpóźniej do',
+        label: 'Analiza stanowiska przed rozmową rozpoczynającą, najpóźniej do',
       };
     case 'SHEET_PROPOSAL':
       return {

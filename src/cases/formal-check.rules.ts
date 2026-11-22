@@ -35,7 +35,7 @@ export function formalCheck(
         id: 'SHEET_SELECTED',
         ok: false,
         message:
-          'Nie wybrano arkusza oceny: zatwierdź analizę opisu stanowiska.',
+          'Nie wybrano arkusza oceny: przeprowadź analizę stanowiska.',
         legalBasis: `§3 ${RO_2016}`,
       },
     ];
