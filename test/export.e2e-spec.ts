@@ -5,7 +5,7 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
 /** Collects a binary response body into a Buffer. */
 function binary(
@@ -63,7 +63,7 @@ describe('Sheet files: GET /api/cases/:id/sheet.pdf|docx (e2e)', () => {
     supervisor = await loginAs(app, 'j.kaminska');
     otherSupervisor = await loginAs(app, 'r.sikora');
     hr = await loginAs(app, 'a.lis');
-    await withToken(app, supervisor).post('/api/demo/reset').expect(200);
+    await resetDemo(app);
   });
 
   afterAll(async () => {

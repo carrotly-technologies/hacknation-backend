@@ -4,7 +4,7 @@ import request from 'supertest';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
 describe('Authentication, roles and permissions (e2e)', () => {
   let app: INestApplication<App>;
@@ -31,7 +31,7 @@ describe('Authentication, roles and permissions (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await withToken(app, kaminska).post('/api/demo/reset').expect(200);
+    await resetDemo(app);
   });
 
   const OBSERVATION = {
@@ -182,6 +182,13 @@ describe('Authentication, roles and permissions (e2e)', () => {
     it('403 on the HR panel and the admin API', async () => {
       await as(kaminska).get('/api/hr/overview').expect(403);
       await as(kaminska).get('/api/admin/users').expect(403);
+    });
+
+    it('403 on the demo reset; ADMIN and HR may reset', async () => {
+      await as(kaminska).post('/api/demo/reset').expect(403);
+      await as(sikora).post('/api/demo/reset').expect(403);
+      await as(admin).post('/api/demo/reset').expect(200);
+      await as(hr).post('/api/demo/reset').expect(200);
     });
   });
 

@@ -82,9 +82,9 @@ export class CasesController {
     });
   }
 
-  /** Demo tool: any signed-in role may restore the seed. */
+  /** Demo tool: only ADMIN and HR may restore the seed (403 for supervisors). */
   @Post('demo/reset')
-  @Can.Anyone()
+  @Roles('ADMIN', 'HR')
   @HttpCode(200)
   async reset() {
     this.cases.reset();

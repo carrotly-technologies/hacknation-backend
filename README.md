@@ -67,10 +67,10 @@ curl localhost:3000/api/me -H "Authorization: Bearer $TOKEN"
 
 | Role         | May                                                                                                   | 403 on                                                    |
 | ------------ | ----------------------------------------------------------------------------------------------------- | --------------------------------------------------------- |
-| `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), `GET /api/people/:personId` (own team), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*` |
+| `SUPERVISOR` | `GET /api/team`, `GET /api/cases` (own only), `GET /api/people/:personId` (own team), read, PATCH, observations and actions of own cases; own journal about own employees | other supervisors' cases and employees, `/api/hr/*`, `/api/admin/*`, `POST /api/demo/reset` |
 | `HR`         | `/api/hr/*`, `GET /api/cases` (all), `GET /api/cases/:id` (read only), `GET /api/people/:personId`                                 | PATCH, observations, actions, `/api/team`, `/api/admin/*`, journal |
-| `ADMIN`      | `/api/admin/*`                                                                                        | cases, `/api/team`, `/api/hr/*`, journal                  |
-| every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP, `POST /api/demo/reset` | —                                                         |
+| `ADMIN`      | `/api/admin/*`, `POST /api/demo/reset` (also HR)                                                      | cases, `/api/team`, `/api/hr/*`, journal                  |
+| every role   | `/api/me`, assistant, `/api/docs`, competency model, sheets, assessments, OSP                         | —                                                         |
 
 - The role is read from the account on every request, never from the token: a role changed by an ADMIN applies to
   that user's next request (the frontend picks it up at the next sign-in).
@@ -133,7 +133,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
 | `GET /api/osp`                   | The 3 real OSP documents from the materials (`src/osp/osp.data.ts`)                     |
 | `GET /api/hr/overview`           | Counters and every case in the office, with evaluator, last reminder and `objectionSubmittedOn` (date of the objection, „Sprzeciw”, else `null`) |
 | `POST /api/hr/reminders`         | Simulated reminders (`{ caseIds }`), logged in each case's history                       |
-| `POST /api/demo/reset`           | Restores the seed (cases and the journal)                                                |
+| `POST /api/demo/reset`           | ADMIN/HR: restores the seed (cases and the journal)                                              |
 | `GET /api/people/:personId`      | Employee profile: `{ person, supervisor, osp, history, currentCase, nextAssessment }`. `osp` = `{ title, purpose, mainTasks }` from the job description of the current case (else the latest), or `null` without one. `history` is newest first: `{ source: 'SYSTEM', caseId, path, cycleLabel, status, result, level, signedByEvaluatorOn, acknowledgedOn }` per case (`result` once signed) and last `{ source: 'EXTERNAL', result, level, date }` (the assessment before the system); `currentCase` = `{ id, path, currentStage }` of the newest unfinished case or `null`; `nextAssessment` `OKRESOWA` \| `PIERWSZA`. Built from the cases the caller may read; 404 for an unknown person and for someone else's employee |
 | `PATCH /api/people/:personId`    | `{ position, unit, employment: 'URZEDNIK' \| 'PRACOWNIK', hiredOn }` (all required, `hiredOn` not after today) → the profile as in `GET`; updates the person in all their cases. Same access as `GET` (404 otherwise), 400 for an empty field or a future date |
 | `GET /api/cases/:id/sheet.pdf`   | The filled periodic sheet (A/B/C, parts I–III) as a PDF (Tinos, metric-compatible with Times New Roman, embedded); who may read the case may download it (403/404 as `GET /api/cases/:id`, 409 for the first assessment) |

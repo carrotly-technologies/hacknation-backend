@@ -3,7 +3,7 @@ import { INestApplication } from '@nestjs/common';
 import { App } from 'supertest/types.js';
 import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
-import { loginAs, withToken } from './auth.helpers.js';
+import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
 // p-nowak, p-mazur, p-dabrowska: cases of the demo supervisor (j.kaminska);
 // p-wieczorek: a case of another evaluator (ev-sikora).
@@ -32,7 +32,7 @@ describe('People: employee profile (e2e)', () => {
   });
 
   beforeEach(async () => {
-    await withToken(app, supervisor).post('/api/demo/reset').expect(200);
+    await resetDemo(app);
   });
 
   const asSupervisor = () => withToken(app, supervisor);
