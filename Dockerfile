@@ -12,6 +12,12 @@ RUN npm run build && npm prune --omit=dev
 FROM node:24-alpine AS runtime
 ENV NODE_ENV=production \
     PORT=3000
+# `apk upgrade` pulls Alpine security fixes released after the base image.
+# The app runs with plain `node`; npm, npx and corepack are not needed at
+# runtime and their bundled packages carry CVEs (docs/security/podatnosci.md).
+RUN apk upgrade --no-cache \
+  && rm -rf /usr/local/lib/node_modules/npm /usr/local/lib/node_modules/corepack \
+      /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
 WORKDIR /app
 COPY --from=build --chown=node:node /app/package.json ./
 COPY --from=build --chown=node:node /app/node_modules ./node_modules
