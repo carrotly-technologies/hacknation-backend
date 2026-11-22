@@ -75,6 +75,12 @@ export interface SheetContentInput {
   place: string;
 }
 
+/**
+ * Font sizes in points, shared by the PDF and the DOCX, as in an official
+ * letter: 12 pt text, 14 pt bold title and part headings, 10 pt notes.
+ */
+export const SHEET_FONT_SIZE = { body: 12, title: 14, small: 10, footer: 9 };
+
 export const DRAFT_HEADER =
   'WERSJA ROBOCZA: ocena nie jest jeszcze podpisana przez oceniającego';
 
@@ -237,7 +243,7 @@ export function buildSheetContent(input: SheetContentInput): SheetContent {
     { kind: 'textBox', text: detail.iprz },
     {
       kind: 'table',
-      widths: [0.2, 0.17, 0.12, 0.21, 0.15, 0.15],
+      widths: [0.2, 0.17, 0.12, 0.18, 0.18, 0.15], // "Data sporządzenia" fits one line at 12 pt
       rows: [
         [
           {

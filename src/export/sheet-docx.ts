@@ -20,17 +20,25 @@ import {
   type Cell,
   DRAFT_HEADER,
   type Inline,
+  SHEET_FONT_SIZE,
   type SheetContent,
 } from './sheet-content.js';
 import { cellColumns } from './table-grid.js';
 
 /**
- * Arial: present in Word on Windows and macOS; LibreOffice on Linux uses the
- * metric-compatible Liberation Sans. Both have every Polish letter.
+ * Times New Roman, as in every Polish official letter: present in Word on
+ * Windows and macOS; LibreOffice on Linux uses the metric-compatible
+ * Liberation Serif (or Tinos, embedded in the PDF). All have every Polish letter.
  */
-const FONT = 'Arial';
-const SIZE = 18; // half-points: 9 pt, as in the PDF
-const SMALL = 15;
+const FONT = 'Times New Roman';
+/** Half-points, the same sizes as in the PDF. */
+const half = (pt: number) => pt * 2;
+const SIZE = half(SHEET_FONT_SIZE.body);
+const TITLE = half(SHEET_FONT_SIZE.title);
+const SMALL = half(SHEET_FONT_SIZE.small);
+const FOOTER = half(SHEET_FONT_SIZE.footer);
+/** Line spacing 1.15 (240 = single). */
+const LINE = 276;
 // A4 in twentieths of a point, 2 cm margins.
 const PAGE = { width: 11906, height: 16838, margin: 1134 };
 const CONTENT_WIDTH = PAGE.width - 2 * PAGE.margin;
@@ -42,7 +50,10 @@ export function renderSheetDocx(sheet: SheetContent): Promise<Buffer> {
     title: sheet.title,
     styles: {
       default: {
-        document: { run: { font: FONT, size: SIZE }, paragraph: {} },
+        document: {
+          run: { font: FONT, size: SIZE },
+          paragraph: { spacing: { line: LINE } },
+        },
       },
     },
     sections: [
@@ -70,7 +81,7 @@ export function renderSheetDocx(sheet: SheetContent): Promise<Buffer> {
                         text: DRAFT_HEADER,
                         bold: true,
                         color: 'B00020',
-                        size: 20,
+                        size: SMALL,
                       }),
                     ],
                   }),
@@ -86,7 +97,7 @@ export function renderSheetDocx(sheet: SheetContent): Promise<Buffer> {
                   new TextRun({
                     font: FONT,
                     text: sheet.footnote,
-                    size: 14,
+                    size: FOOTER,
                     color: '666666',
                   }),
                 ],
@@ -102,7 +113,7 @@ export function renderSheetDocx(sheet: SheetContent): Promise<Buffer> {
                       ' z ',
                       PageNumber.TOTAL_PAGES,
                     ],
-                    size: 14,
+                    size: FOOTER,
                   }),
                 ],
               }),
@@ -126,6 +137,7 @@ function runs(
         font: FONT,
         text: content,
         ...base,
+        size: base.size ?? SIZE,
       }),
     ];
   return content.map(
@@ -137,7 +149,7 @@ function runs(
         bold: run.bold ?? base.bold,
         italics: run.italic || run.muted || base.italics,
         color: run.muted ? '777777' : undefined,
-        size: run.muted ? SMALL : base.size,
+        size: run.muted ? SMALL : (base.size ?? SIZE),
       }),
   );
 }
@@ -148,7 +160,7 @@ function toDocx(block: Block): (Paragraph | Table)[] {
       return [
         new Paragraph({
           alignment: AlignmentType.RIGHT,
-          children: runs(block.text, { size: 16 }),
+          children: runs(block.text, { size: SMALL }),
         }),
       ];
     case 'title':
@@ -157,7 +169,7 @@ function toDocx(block: Block): (Paragraph | Table)[] {
           new Paragraph({
             alignment: AlignmentType.CENTER,
             spacing: { before: i === 0 ? 160 : 0, after: 160 },
-            children: runs(line, { bold: true, size: i === 0 ? 26 : 22 }),
+            children: runs(line, { bold: true, size: i === 0 ? TITLE : SIZE }),
           }),
       );
     case 'part':
@@ -170,7 +182,7 @@ function toDocx(block: Block): (Paragraph | Table)[] {
               font: FONT,
               text: block.text,
               bold: true,
-              size: 22,
+              size: TITLE,
               characterSpacing: 60,
             }),
           ],
@@ -243,6 +255,7 @@ function table(widths: number[], rows: Cell[][]): Table {
                 margins: { top: 40, bottom: 40, left: 80, right: 80 },
                 children: [
                   new Paragraph({
+                    spacing: { line: 240 }, // single spacing in the form's tables
                     alignment:
                       cell.align === 'center'
                         ? AlignmentType.CENTER
@@ -299,7 +312,7 @@ function signatures(cells: { value: string; caption: string }[]): Table {
                 }),
                 new Paragraph({
                   alignment: AlignmentType.CENTER,
-                  children: runs(cell.caption, { italics: true, size: 14 }),
+                  children: runs(cell.caption, { italics: true, size: SMALL }),
                 }),
               ],
             }),
