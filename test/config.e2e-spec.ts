@@ -32,7 +32,7 @@ describe('Config: the assistant is always on (e2e)', () => {
   });
 
   it('serves every /api/assistant/* route', async () => {
-    const token = await loginAs(app, 'j.kaminska');
+    const token = await loginAs(app, 'k.wisniewska');
     const http = () => withToken(app, token);
     await http()
       .post('/api/assistant/ask')

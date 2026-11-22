@@ -25,9 +25,9 @@ describe('Journal: notes and observations about an employee (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    supervisor = await loginAs(app, 'j.kaminska');
-    otherSupervisor = await loginAs(app, 'r.sikora');
-    hr = await loginAs(app, 'a.lis');
+    supervisor = await loginAs(app, 'k.wisniewska');
+    otherSupervisor = await loginAs(app, 'a.szymanczak');
+    hr = await loginAs(app, 'a.cieslak-dyjecinska');
     admin = await loginAs(app, 'admin');
   });
 

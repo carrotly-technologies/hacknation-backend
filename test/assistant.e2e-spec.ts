@@ -18,7 +18,7 @@ describe('Assistant (e2e, no LLM configured)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    token = await loginAs(app, 'j.kaminska');
+    token = await loginAs(app, 'k.wisniewska');
   });
 
   afterAll(async () => {

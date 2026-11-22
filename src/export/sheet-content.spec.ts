@@ -75,7 +75,7 @@ describe('buildSheetContent', () => {
       'CZĘŚĆ II',
       OFFICE_NAME,
       'Dąbrowska',
-      'Kamińska',
+      'Wiśniewska',
       'DATA PRZEPROWADZENIA ROZMOWY OCENIAJĄCEJ',
       'Średnia arytmetyczna z ocen cząstkowych przyznanych za poszczególne kryteria oceny: 6,33',
       'powyżej 6 punktów do 8 punktów',

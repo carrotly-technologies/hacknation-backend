@@ -5,7 +5,7 @@ import { AppModule } from './../src/app.module.js';
 import { configureApp } from './../src/configure-app.js';
 import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
-// p-nowak, p-mazur, p-dabrowska: cases of the demo supervisor (j.kaminska);
+// p-nowak, p-mazur, p-dabrowska: cases of the demo supervisor (k.wisniewska);
 // p-wieczorek: a case of another evaluator (ev-sikora).
 describe('People: employee profile (e2e)', () => {
   let app: INestApplication<App>;
@@ -22,8 +22,8 @@ describe('People: employee profile (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    supervisor = await loginAs(app, 'j.kaminska');
-    hr = await loginAs(app, 'a.lis');
+    supervisor = await loginAs(app, 'k.wisniewska');
+    hr = await loginAs(app, 'a.cieslak-dyjecinska');
     admin = await loginAs(app, 'admin');
   });
 
@@ -50,8 +50,8 @@ describe('People: employee profile (e2e)', () => {
         hiredOn: expect.stringMatching(/^\d{4}-\d{2}-\d{2}$/),
       },
       supervisor: {
-        firstName: 'Joanna',
-        lastName: 'Kamińska',
+        firstName: 'Karolina',
+        lastName: 'Wiśniewska',
         position: 'Naczelnik wydziału',
         unit: expect.any(String),
       },
@@ -120,7 +120,7 @@ describe('People: employee profile (e2e)', () => {
       .get('/api/people/p-wieczorek')
       .expect(200);
     expect(res.body.person.id).toBe('p-wieczorek');
-    expect(res.body.supervisor.lastName).toBe('Sikora');
+    expect(res.body.supervisor.lastName).toBe('Szymańczak');
     await withToken(app, hr).get('/api/people/p-nowak').expect(200);
   });
 

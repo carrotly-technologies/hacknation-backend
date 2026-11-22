@@ -7,7 +7,7 @@ import { CaseStore } from './../src/cases/case-store.service.js';
 import { configureApp } from './../src/configure-app.js';
 import { loginAs, resetDemo, withToken } from './auth.helpers.js';
 
-/** c-101: signed by Robert Sikora, waiting for the assessed person. */
+/** c-101: signed by Agnieszka Szymańczak, waiting for the assessed person. */
 describe('Link for the assessed person (e2e)', () => {
   let app: INestApplication<App>;
   let sikora: string;
@@ -22,9 +22,9 @@ describe('Link for the assessed person (e2e)', () => {
     app = moduleFixture.createNestApplication();
     configureApp(app);
     await app.init();
-    sikora = await loginAs(app, 'r.sikora');
-    kaminska = await loginAs(app, 'j.kaminska');
-    hr = await loginAs(app, 'a.lis');
+    sikora = await loginAs(app, 'a.szymanczak');
+    kaminska = await loginAs(app, 'k.wisniewska');
+    hr = await loginAs(app, 'a.cieslak-dyjecinska');
   });
 
   afterAll(async () => {
@@ -83,7 +83,7 @@ describe('Link for the assessed person (e2e)', () => {
         path: 'PERIODIC',
         sheetId: 'C',
         person: { firstName: 'Karolina', lastName: 'Wieczorek' },
-        evaluator: { lastName: 'Sikora' },
+        evaluator: { lastName: 'Szymańczak' },
         decisions: { rzetelnosc: 7 },
         evaluation: { result: 'POSITIVE' },
         signedByEvaluatorOn: expect.any(String),
