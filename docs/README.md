@@ -1,7 +1,7 @@
 # Dokumenty źródłowe – Kompas Kompetencji
 
 Materiały od Ministerstwa Cyfryzacji do zadania „Kompas Kompetencji” (HackNation 2026).
-Porównanie tych wymagań z implementacją, wraz z listą braków: [`audyt-zgodnosci.md`](audyt-zgodnosci.md).
+Opis zgłoszenia (projekt, wykorzystanie AI, architektura, teksty do HackTribe): [`zgloszenie/`](zgloszenie/).
 Oryginały leżą w podkatalogach tematycznych, a `tekst/` ma ich wersje tekstowe w tej samej strukturze,
 do czytania przez agentów i jako baza wiedzy asystenta AI.
 

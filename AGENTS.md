@@ -60,7 +60,7 @@ Rozwiązanie powinno być:
    - Moduły Nest są małe i niezależne (`src/<feature>/`), żeby poprawka jednego obszaru nie wymagała zmian w innych.
 
 5. **Zgodne z przepisami**: uwzględnia przepisy ustawy o służbie cywilnej oraz regulacje dotyczące ochrony danych.
-   - Źródłem prawdy są dokumenty w `docs/` (ustawa, rozporządzenia z 2015 i 2016 r., model kompetencji, poradniki); spis w `docs/README.md`, stan zgodności w `docs/audyt-zgodnosci.md`. Nie wymyślaj reguł, których tam nie ma.
+   - Źródłem prawdy są dokumenty w `docs/` (ustawa, rozporządzenia z 2015 i 2016 r., model kompetencji, poradniki); spis w `docs/README.md`, opis zgłoszenia (funkcje, AI, architektura) w `docs/zgloszenie/`. Nie wymyślaj reguł, których tam nie ma.
    - RODO i minimalizacja danych: przetwarzamy tylko pola potrzebne do oceny. Żadnych danych osobowych (imię, nazwisko, PESEL, treść ocen) w logach.
    - Do zewnętrznego LLM wysyłamy tylko to, co potrzebne do odpowiedzi. Bez identyfikatorów pracownika, jeśli pytanie ich nie wymaga.
    - AI jest wyłącznie doradcze: może sugerować (np. `src/assessments/suggest-level.rules.ts`), ale nigdy nie ustala ostatecznej oceny. Decyzja zawsze należy do przełożonego, co widać w API i w UI.
