@@ -74,6 +74,13 @@ export class MonitorService implements OnModuleInit, OnModuleDestroy {
     });
   }
 
+  /** Deletes the whole activity log (the team clears it after the demo). */
+  async clear(): Promise<{ removed: number }> {
+    const removed = await this.repo.deleteAll();
+    this.logger.log(`Wyczyszczono dziennik aktywności (${removed} wpisów).`);
+    return { removed };
+  }
+
   async sessions(query: SessionsQuery): Promise<SessionPage> {
     const entries = await this.repo.list({ from: query.from, to: query.to });
     return groupSessions(entries, query);

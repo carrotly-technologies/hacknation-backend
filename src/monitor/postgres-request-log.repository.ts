@@ -53,6 +53,13 @@ export class PostgresRequestLogRepository extends RequestLogRepository {
     return rows.length;
   }
 
+  async deleteAll() {
+    const rows = await this.db
+      .delete(requestLog)
+      .returning({ id: requestLog.id });
+    return rows.length;
+  }
+
   private async select(where: SQL | undefined) {
     const rows = await this.db
       .select()

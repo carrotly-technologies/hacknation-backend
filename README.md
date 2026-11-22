@@ -404,6 +404,7 @@ checks in the app (`/admin/dziennik` in the frontend). Reads are not logged.
 | `POST /api/telemetry/pageview`        | Public: `{ path }` (starts with `/`, ≤ 500 chars) → 204; the frontend sends it on every route change |
 | `GET /api/monitor/sessions`           | `?from&to` (date or ISO 8601; a date `to` includes the whole day), `?ip` (part of the address), `?userId` (part of the account id or login), `?page` (1…), `?pageSize` (1–200, default 50) → `{ items, total, page, pageSize }`; each `{ sessionId, anonymous, users: [{ id, name }], ips, userAgent, firstAt, lastAt, pageviews, apiCalls, errors }`, latest activity first |
 | `GET /api/monitor/sessions/:sessionId` | `{ session, entries }`: the summary and every entry, oldest first; 404 for an unknown session     |
+| `DELETE /api/monitor/sessions`        | Deletes the whole activity log (every session and entry) → `{ removed }`                           |
 
 `/api/monitor/*` needs the header `X-Monitor-Token` equal to `MONITOR_TOKEN` (compared in constant time). Without it,
 with a wrong one, or while `MONITOR_TOKEN` is unset, it answers 404 as if the route did not exist. Demo accounts and

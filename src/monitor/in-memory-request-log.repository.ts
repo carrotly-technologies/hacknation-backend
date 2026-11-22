@@ -41,6 +41,12 @@ export class InMemoryRequestLogRepository extends RequestLogRepository {
     return before - this.entries.length;
   }
 
+  async deleteAll() {
+    const removed = this.entries.length;
+    this.entries = [];
+    return removed;
+  }
+
   private select(keep: (e: RequestLogEntry) => boolean) {
     return this.entries
       .filter(keep)

@@ -1,5 +1,13 @@
 import { Public } from '@nestjs/authentication';
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import {
   ApiHeader,
   ApiNotFoundResponse,
@@ -43,6 +51,16 @@ export class MonitorController {
     @Query({ schema: sessionsQuerySchema }) query: SessionsQuery,
   ): Promise<SessionPage> {
     return this.monitor.sessions(query);
+  }
+
+  @Delete('sessions')
+  @HttpCode(200)
+  @ApiOperation({
+    summary: 'Usuwa cały dziennik aktywności (wszystkie sesje i wpisy)',
+  })
+  @ApiOkResponse({ description: '`{ removed }`: liczba usuniętych wpisów.' })
+  clear(): Promise<{ removed: number }> {
+    return this.monitor.clear();
   }
 
   @Get('sessions/:sessionId')

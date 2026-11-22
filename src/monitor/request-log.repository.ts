@@ -20,6 +20,8 @@ export abstract class RequestLogRepository {
   abstract listWithoutSession(range: TimeRange): Promise<RequestLogEntry[]>;
   /** Deletes entries before `cutoff` (ISO 8601); returns how many. */
   abstract deleteOlderThan(cutoff: string): Promise<number>;
+  /** Deletes every entry; returns how many. */
+  abstract deleteAll(): Promise<number>;
 }
 
 export function inRange(at: string, { from, to }: TimeRange): boolean {
