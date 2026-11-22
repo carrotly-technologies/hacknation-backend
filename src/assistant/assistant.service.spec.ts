@@ -140,7 +140,9 @@ describe('AssistantService', () => {
       chat.mockResolvedValue(null);
       const res = await ask(followUp, { history });
       expect(res).toMatchObject({ grounded: true, mode: 'EXTRACTIVE' });
-      expect(isArt83(res.sources[0].ref)).toBe(true);
+      // art. 83 ust. 1 itself or the Q&A entry that restates it.
+      expect(res.sources[0].quote).toContain('dyrektora generalnego urzędu');
+      expect(res.sources[0].quote).toMatch(/art\. 83 ust\. 1|^Art\. 83\. 1\./);
       expect(res.answer).toContain('dyrektora generalnego urzędu');
     });
 
@@ -182,7 +184,8 @@ describe('AssistantService', () => {
         .mockResolvedValueOnce('Do dyrektora generalnego urzędu [1].');
       const res = await ask(followUp, { history });
       expect(res).toMatchObject({ mode: 'LLM', grounded: true });
-      expect(isArt83(res.sources[0].ref)).toBe(true);
+      expect(res.sources[0].quote).toContain('dyrektora generalnego urzędu');
+      expect(res.sources[0].quote).toMatch(/art\. 83 ust\. 1|^Art\. 83\. 1\./);
     });
 
     it('without history, asks the LLM once, as before', async () => {

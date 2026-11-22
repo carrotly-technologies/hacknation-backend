@@ -171,6 +171,7 @@ describe('assistant retrieval eval', () => {
           : `Misses: ${misses.length} (EVAL_VERBOSE=1 lists them)`,
       ].join('\n') + '\n',
     );
-    expect(n).toBe(72);
+    // 72 from the team's set, 3 hand-written additions (qa-extra.data.ts).
+    expect(n).toBe(75);
   });
 });

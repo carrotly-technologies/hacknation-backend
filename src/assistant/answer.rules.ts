@@ -71,10 +71,11 @@ export function retrieve(
           const p = qaPath(h);
           return !path || !p || p === path;
         })
-        .slice(0, 1)
-        .filter(
-          (h) => h.score >= QA_MIN_SCORE && h.coverage >= QA_MIN_COVERAGE,
-        );
+        .filter((h) => h.score >= QA_MIN_SCORE && h.coverage >= QA_MIN_COVERAGE)
+        // The entry that covers more of the question wins over a higher BM25
+        // score on fewer terms ("termin sprzeciwu" over "sprzeciw od pierwszej").
+        .sort((a, b) => b.coverage - a.coverage || b.score - a.score)
+        .slice(0, 1);
   const primary = kb.search(question, {
     k: MAX_SOURCES - qa.length,
     exclude: ['QA', ...skip],

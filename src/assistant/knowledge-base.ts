@@ -1,5 +1,6 @@
 import { Bm25Index } from './bm25.js';
 import { KNOWLEDGE_CHUNKS } from './data/knowledge.data.js';
+import { QA_ALIASES, QA_EXTRA_CHUNKS } from './data/qa-extra.data.js';
 import type { KnowledgeChunk, KnowledgeDocId } from './knowledge.types.js';
 import { expandQuery } from './query-expansion.rules.js';
 
@@ -38,6 +39,16 @@ const prior = (c: KnowledgeChunk): number => {
 const indexText = (c: KnowledgeChunk): string =>
   [c.ref, c.section ?? '', c.keywords ?? '', c.text].join('\n');
 
+/** The generated chunks plus the hand-written Q&A additions. */
+export const ALL_CHUNKS: KnowledgeChunk[] = [
+  ...KNOWLEDGE_CHUNKS,
+  ...QA_EXTRA_CHUNKS,
+];
+
+/** What the Q&A question index sees: the question and its other phrasings. */
+const qaIndexText = (c: KnowledgeChunk): string =>
+  [c.qa!.question, ...(QA_ALIASES[c.qa!.no] ?? [])].join('\n');
+
 /** In-memory lexical index over every chunk of the knowledge base. */
 export class KnowledgeBase {
   readonly chunks: KnowledgeChunk[];
@@ -45,11 +56,11 @@ export class KnowledgeBase {
   private readonly qaChunks: KnowledgeChunk[];
   private readonly qaIndex: Bm25Index;
 
-  constructor(chunks: KnowledgeChunk[] = KNOWLEDGE_CHUNKS) {
+  constructor(chunks: KnowledgeChunk[] = ALL_CHUNKS) {
     this.chunks = chunks;
     this.index = new Bm25Index(chunks.map(indexText));
     this.qaChunks = chunks.filter((c) => c.qa);
-    this.qaIndex = new Bm25Index(this.qaChunks.map((c) => c.qa!.question));
+    this.qaIndex = new Bm25Index(this.qaChunks.map(qaIndexText));
   }
 
   /** Q&A entries whose question (not answer) matches the query. */
