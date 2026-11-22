@@ -500,6 +500,59 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
     await asHr().post('/api/hr/reminders').send({ caseIds: [] }).expect(400);
   });
 
+  describe('POST /api/cases', () => {
+    it('starts the next periodic cycle for an acknowledged assessment and lands on OSP analysis', async () => {
+      const before = await http().get('/api/people/p-dabrowska').expect(200);
+      expect(before.body.canStartCase).toBe(true);
+      const res = await http()
+        .post('/api/cases')
+        .send({ personId: 'p-dabrowska' })
+        .expect(201);
+      expect(res.body).toMatchObject({
+        path: 'PERIODIC',
+        currentStage: 'OSP_ANALYSIS',
+        status: 'W_TOKU',
+        person: { id: 'p-dabrowska' },
+      });
+      expect(res.body.id).toMatch(/^c-\d{3}$/);
+      const opening = res.body.stages.find(
+        (s: { id: string }) => s.id === 'OPENING_TALK',
+      );
+      expect(opening.deadline.legalBasis).toContain('§7 pkt 1');
+      await http().get(`/api/cases/${res.body.id}`).expect(200);
+      const after = await http().get('/api/people/p-dabrowska').expect(200);
+      expect(after.body.currentCase.id).toBe(res.body.id);
+      expect(after.body.canStartCase).toBe(false);
+      await http()
+        .post('/api/cases')
+        .send({ personId: 'p-dabrowska' })
+        .expect(409);
+    });
+
+    it('409 while a case is in progress, 404 for an unknown or foreign person, 400 without personId', async () => {
+      await http().post('/api/cases').send({ personId: 'p-nowak' }).expect(409);
+      await http()
+        .post('/api/cases')
+        .send({ personId: 'p-nobody' })
+        .expect(404);
+      await http()
+        .post('/api/cases')
+        .send({ personId: 'p-wieczorek' })
+        .expect(404);
+      await http().post('/api/cases').send({}).expect(400);
+    });
+
+    it('HR may start a case for any person; it stays with the supervisor', async () => {
+      const res = await asHr()
+        .post('/api/cases')
+        .send({ personId: 'p-dabrowska' })
+        .expect(201);
+      expect(res.body.ackLink ?? null).toBeNull();
+      const own = await http().get(`/api/cases/${res.body.id}`).expect(200);
+      expect(own.body.currentStage).toBe('OSP_ANALYSIS');
+    });
+  });
+
   it('POST /api/demo/reset restores the seed', async () => {
     await act('c-002', 'ACCEPT_OSP_ANALYSIS').expect(200);
     await resetDemo(app);

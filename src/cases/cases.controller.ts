@@ -13,6 +13,8 @@ import type { CaseAction, CaseDetail, CaseSummary } from './case.types.js';
 import {
   type ActionInput,
   actionSchema,
+  type CreateCase,
+  createCaseSchema,
   type ObservationInput,
   observationSchema,
   type PatchCase,
@@ -44,6 +46,15 @@ export class CasesController {
   @Roles('SUPERVISOR', 'HR')
   list(): CaseSummary[] {
     return this.cases.visibleCases();
+  }
+
+  /** New case for a person: their supervisor or HR (`{ personId }`). */
+  @Post('cases')
+  @Roles('SUPERVISOR', 'HR')
+  create(
+    @Body({ schema: createCaseSchema }) body: CreateCase,
+  ): Promise<CaseDetail> {
+    return this.cases.create(body.personId);
   }
 
   @Get('cases/:id')
