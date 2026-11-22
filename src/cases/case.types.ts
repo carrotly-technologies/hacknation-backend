@@ -7,7 +7,7 @@ export type Path = 'PERIODIC' | 'FIRST';
 
 export const PERIODIC_STAGES = [
   'OSP_ANALYSIS',
-  // "Wstępny formularz": the evaluator reviews the proposed sheet and its
+  // "Analiza stanowiska" (one UI step with OSP_ANALYSIS): the evaluator reviews the proposed sheet and its
   // criteria before the opening talk.
   'SHEET_PROPOSAL',
   'OPENING_TALK',

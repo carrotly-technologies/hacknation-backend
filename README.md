@@ -180,7 +180,7 @@ fictional data relative to `DEMO_TODAY` (env, default `2026-11-21`); every deadl
   After the confirmation the link no longer shows the sheet but keeps working for the objection
   (`src/cases/objection.rules.ts`, hacknation-backend#56): until `objectionDeadline` the assessed person can file
   one objection, read-only afterwards; past the term `GET` returns `objectionOpen: false`.
-- Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` („Wstępny formularz”: the evaluator reviews the proposed sheet and
+- Periodic stages: `OSP_ANALYSIS` → `SHEET_PROPOSAL` (shown with `OSP_ANALYSIS` as one step „Analiza stanowiska”: the evaluator reviews the proposed sheet and
   criteria, may change them with PATCH, then `ACCEPT_SHEET`) → `OPENING_TALK` → … `ACCEPT_OSP_ANALYSIS` now moves the
   case to `SHEET_PROPOSAL`; cases already past it report its `completedOn` as the OSP analysis date.
 - After `ASSESSMENT` („Formularz oceny kompetencji”, the sheet filled as a draft) come the stages III and IV of the

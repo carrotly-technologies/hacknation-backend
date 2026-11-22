@@ -114,7 +114,7 @@ describe('Cases, team, OSP and HR (e2e, contract v2)', () => {
       sheetAccepted.body.stages.find(
         (s: { id: string }) => s.id === 'SHEET_PROPOSAL',
       ),
-    ).toMatchObject({ name: 'Wstępny formularz', status: 'DONE' });
+    ).toMatchObject({ name: 'Analiza stanowiska', status: 'DONE' });
   });
 
   it('rates, decides and signs the main case', async () => {
