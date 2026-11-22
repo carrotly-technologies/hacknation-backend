@@ -283,6 +283,10 @@ npm run test:cov
 
 ## Deploy
 
+Where the data is hosted (server in Poland, what leaves the EU), its level under the government cloud standard
+(SCCO, KPRM / Ministry of Digital Affairs) and the production path to an office server room or a national cloud:
+[`docs/hosting.md`](docs/hosting.md) (Polish).
+
 Production runs on Coolify (project **Hackathons**, environment `production`)
 as the `hacknation-backend` application, built from this repo's `Dockerfile`:
 
